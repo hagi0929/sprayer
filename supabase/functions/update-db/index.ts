@@ -44,7 +44,7 @@ type TechstackOption = {
 };
 type ArticleTagOption = {
   id: string;
-  name: string;
+  label: string;
 };
 
 type ProjectPropertyData = {
@@ -54,6 +54,7 @@ type ProjectPropertyData = {
 
 type ArticlePropertyData = {
   tags: ArticleTagOption[];
+  series: ArticleSeriesOption[];
   lastEditedTime: string;
 };
 
@@ -93,7 +94,7 @@ type ProjectQueryData = {
 };
 
 function parseProjectQueryData(response: any): ProjectQueryData[] {
-  return response.results.map((page: any): ProjectData => {
+  return response.results.map((page: any): ProjectQueryData => {
     const techstacks: TechstackOption[] = page.properties.Techstack.multi_select.map(
       (option: any) => ({
         id: option.id,
@@ -142,14 +143,18 @@ function parseProjectQueryData(response: any): ProjectQueryData[] {
 }
 
 function parseArticleData(request: any): ArticlePropertyData {
-  const tags = request.properties.Tag.multi_select.options.map((option: any) => ({
+  const tags = request.properties.tag.multi_select.options.map((option: any) => ({
     id: option.id,
-    name: option.name,
+    label: option.name,
+  }));
+  const series = request.properties.series.select.options.map((option: any) => ({
+    id: option.id,
+    label: option.name,
   }));
 
   const lastEditedTime = request.last_edited_time;
 
-  return { tags, lastEditedTime };
+  return { tags, series, lastEditedTime };
 }
 
 // const parseNotionQueryData = (data) => {
@@ -164,7 +169,6 @@ function parseArticleData(request: any): ArticlePropertyData {
 //   return results;
 // }
 function parseArticleQueryData(request: any): any {
-  console.log(request);
 }
 
 type NotionObjectRow = {
@@ -201,10 +205,12 @@ const updateProjects = async (DBNotionId: string) => {
     const notionDBData = parseProjectQueryData(rawNotionDBData);
 
     // Create a map of current Supabase data
-    const dataMap: Map<string, NotionObjectRow> = new Map(supabaseProjectData.map((row: any) => [row.id, row]));
+    const dataMap: Map<string, NotionObjectRow> = new Map(
+      supabaseProjectData.map((row: any) => [row.id, row])
+    );
 
     // Prepare arrays for batch operations
-    const notionObjectToDelete = [];
+    const notionObjectToDelete: string[] = [];
     const notionObjectToInsert: NotionObjectRow[] = [];
     const projectTableData: ProjectTableRow[] = [];
     const projectTechStackRelationData: ProjectTechstackRelationsRow[] = [];
@@ -241,7 +247,7 @@ const updateProjects = async (DBNotionId: string) => {
         id: projectData.id,
         title: projectData.title,
         description: projectData.description,
-        links: projectData.links,
+        links: projectData.links, // Store as JSONB directly
       });
 
       projectData.techstacks.forEach((techstack) => {
@@ -300,7 +306,7 @@ const updateProjects = async (DBNotionId: string) => {
         console.error('Error inserting into ProjectTechStackRelations table:', relationInsertError);
       }
     }
-
+    console.log('Projects updated successfully!');
   } catch (error) {
     console.error('Error updating projects:', error);
   }
@@ -399,8 +405,172 @@ const updateTechstack = async (techstacks: TechstackOption[]) => {
 };
 
 const updateArticleTag = async (tags: ArticleTagOption[]) => {
-  const { data, error } = await supabaseClient.from('ArticleTag').select()
+  // Fetch current tags from the database
+  const { data: currentTags, error } = await supabaseClient.from('ArticleTag').select();
+
+  if (error) {
+    console.error('Error fetching article tags:', error);
+    return;
+  }
+
+  const operations = {
+    add: [] as ArticleTagOption[],
+    update: [] as ArticleTagOption[],
+    delete: [] as string[],
+  };
+
+  const currentTagMap: Map<string, ArticleTagOption> = new Map(
+    currentTags.map((tag: ArticleTagOption) => [tag.id, tag])
+  );
+
+  const incomingTagMap = new Map(
+    tags.map((tag) => [tag.id, tag])
+  );
+
+  // Compare and identify add, update, and delete operations
+  tags.forEach((incomingTag) => {
+    const currentTag = currentTagMap.get(incomingTag.id);
+
+    if (!currentTag) {
+      // Tag is not in the database, add it
+      operations.add.push(incomingTag);
+    } else if (currentTag.label !== incomingTag.label) {
+      // Tag exists but the name has changed, update it
+      operations.update.push(incomingTag);
+    }
+    // If the tag is the same, no action is needed
+  });
+
+  // Identify tags to delete (those in the database but not in the incoming list)
+  currentTags.forEach((currentTag: ArticleTagOption) => {
+    if (!incomingTagMap.has(currentTag.id)) {
+      operations.delete.push(currentTag.id);
+    }
+  });
+
+  // Perform batch operations in the database
+  if (operations.add.length > 0) {
+    const { error: addError } = await supabaseClient
+      .from('ArticleTag')
+      .insert(operations.add);
+
+    if (addError) {
+      console.error('Error adding article tags:', addError);
+    }
+  }
+
+  if (operations.update.length > 0) {
+    const { error: updateError } = await Promise.all(
+      operations.update.map((tag) =>
+        supabaseClient
+          .from('ArticleTag')
+          .update({ name: tag.name })
+          .eq('id', tag.id)
+      )
+    );
+
+    if (updateError) {
+      console.error('Error updating article tags:', updateError);
+    }
+  }
+
+  if (operations.delete.length > 0) {
+    const { error: deleteError } = await supabaseClient
+      .from('ArticleTag')
+      .delete()
+      .in('id', operations.delete);
+
+    if (deleteError) {
+      console.error('Error deleting article tags:', deleteError);
+    }
+  }
+};
+
+type ArticleSeriesOption = {
+  id: string;
+  label: string;
 }
+const updateArticleSeries = async (series: ArticleSeriesOption[]) => {
+  // Fetch current series from the database
+  const { data: currentSeries, error } = await supabaseClient.from('ArticleSeries').select();
+
+  if (error) {
+    console.error('Error fetching article series:', error);
+    return;
+  }
+
+  const operations = {
+    add: [] as ArticleSeriesOption[],
+    update: [] as ArticleSeriesOption[],
+    delete: [] as string[],
+  };
+
+  const currentSeriesMap = new Map(
+    currentSeries.map((item: ArticleSeriesOption) => [item.id, item])
+  );
+
+  const incomingSeriesMap = new Map(
+    series.map((item) => [item.id, item])
+  );
+
+  // Compare and identify add, update, and delete operations
+  series.forEach((incomingItem) => {
+    const currentItem = currentSeriesMap.get(incomingItem.id);
+
+    if (!currentItem) {
+      // Series is not in the database, add it
+      operations.add.push(incomingItem);
+    } else if (currentItem.label !== incomingItem.label) {
+      // Series exists but the label has changed, update it
+      operations.update.push(incomingItem);
+    }
+    // If the series is the same, no action is needed
+  });
+
+  // Identify series to delete (those in the database but not in the incoming list)
+  currentSeries.forEach((currentItem: ArticleSeriesOption) => {
+    if (!incomingSeriesMap.has(currentItem.id)) {
+      operations.delete.push(currentItem.id);
+    }
+  });
+
+  // Perform batch operations in the database
+  if (operations.add.length > 0) {
+    const { error: addError } = await supabaseClient
+      .from('ArticleSeries')
+      .insert(operations.add);
+
+    if (addError) {
+      console.error('Error adding article series:', addError);
+    }
+  }
+
+  if (operations.update.length > 0) {
+    const { error: updateError } = await Promise.all(
+      operations.update.map((item) =>
+        supabaseClient
+          .from('ArticleSeries')
+          .update({ label: item.label })
+          .eq('id', item.id)
+      )
+    );
+
+    if (updateError) {
+      console.error('Error updating article series:', updateError);
+    }
+  }
+
+  if (operations.delete.length > 0) {
+    const { error: deleteError } = await supabaseClient
+      .from('ArticleSeries')
+      .delete()
+      .in('id', operations.delete);
+
+    if (deleteError) {
+      console.error('Error deleting article series:', deleteError);
+    }
+  }
+};
 
 Deno.serve(async (req) => {
   const { name } = await req.json()
@@ -426,6 +596,7 @@ Deno.serve(async (req) => {
       const DBProperty = parseArticleData(notionDBData);
       if (lastUpdated === null || new Date(lastUpdated) < new Date(DBProperty.lastEditedTime)) {
         await updateArticleTag(DBProperty.tags);
+        await updateArticleSeries(DBProperty.series);
         await updateArticles(notionId);
       }
 

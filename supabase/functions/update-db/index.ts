@@ -201,7 +201,7 @@ const updateProjects = async (DBNotionId: string) => {
     const notionDBData = parseProjectQueryData(rawNotionDBData);
 
     // Create a map of current Supabase data
-    const dataMap = new Map(supabaseProjectData.map((row: any) => [row.id, row]));
+    const dataMap: Map<string, NotionObjectRow> = new Map(supabaseProjectData.map((row: any) => [row.id, row]));
 
     // Prepare arrays for batch operations
     const notionObjectToDelete = [];
@@ -331,7 +331,7 @@ const updateTechstack = async (techstacks: TechstackOption[]) => {
     delete: [] as string[],
   };
 
-  const currentTechstackMap : Map<string, TechstackTableRow>= new Map(
+  const currentTechstackMap: Map<string, TechstackTableRow> = new Map(
     currentTechstacks.map((techstack: TechstackTableRow) => [
       techstack.id,
       techstack,
@@ -344,7 +344,7 @@ const updateTechstack = async (techstacks: TechstackOption[]) => {
 
   // Compare and identify add, update, and delete operations
   techstacks.forEach((incomingTechstackTemp) => {
-    const incomingTechstack = {id: incomingTechstackTemp.id, label: incomingTechstackTemp.name} as TechstackTableRow;
+    const incomingTechstack = { id: incomingTechstackTemp.id, label: incomingTechstackTemp.name } as TechstackTableRow;
 
     const currentTechstack = currentTechstackMap.get(incomingTechstack.id);
     if (!currentTechstack) {

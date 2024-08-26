@@ -201,6 +201,8 @@ const updateProjects = async (DBNotionId: string) => {
 
   const notionObjectToDelete = [];
   const notionObjectToInsert: NotionObjectRow[] = [];
+  const projectTableData: ProjectTableRow[] = [];
+  const projectTechStackRelationData: ProjectTechstackRelationsRow[] = [];
   const projectsToInsert: ProjectQueryData[] = [];
   for (const projectData of notionDBData) {
     const id = projectData['id'];
@@ -214,6 +216,7 @@ const updateProjects = async (DBNotionId: string) => {
           lastUpdated: new Date(projectData.lastEditedTime),
           database: DBNotionId
         } as NotionObjectRow);
+        dataMap.delete(id);
       }
     } else {
       notionObjectToDelete.push(id);
@@ -224,64 +227,124 @@ const updateProjects = async (DBNotionId: string) => {
         database: DBNotionId
       } as NotionObjectRow);
     }
-    // remove all the notion object that are in notionObjectToDelete in a bulk request
-    supabaseClient.from('NotionObject').delete().in('id', notionObjectToDelete);
-    // insert all the notion object that are in notionObjectToInsert in a bulk request
-    supabaseClient.from('NotionObject').insert(notionObjectToInsert);
-    const projectTableData: ProjectTableRow[] = [];
-    const projectTechStackRelationData: ProjectTechstackRelationsRow[] = [];
-    for (const projectData of projectsToInsert) {
-      projectTableData.push({
-        id: projectData.id,
-        title: projectData.title,
-        description: projectData.description,
-        links: projectData.links
-      });
-    }
   }
-
-  // for (const row of invalidNotionObject) {
-  //   const { data, error } = await tableName === 'Project' ? insertProject(notionId) : insertArticle(notionId);
-  //   if (error) {
-  //     throw error
-  //   }
-  // }
-  // const supabaseData = data;
-  // const supabaseDataMap = new Map();
-  // for (const row of supabaseData) {
-  //   supabaseDataMap.set(row['id'], row);
-  // }
-
-  // for (const row of DBProperty) {
-  //   const id = row['id'];
-  //   const supabaseRow = supabaseDataMap.get(id);
-  //   if (supabaseRow) {
-  //     const { data, error } = await supabaseClient.from(tableName).update(row).match({ id: id });
-  //     if (error) {
-  //       throw error
-  //     }
-  //   } else {
-  //     const { data, error } = await supabaseClient.from(tableName).insert(row);
-  //     if (error) {
-  //       throw error
-  //     }
-  //   }
-  // }
-
-  // const { data, error } = await supabaseClient.from('NotionDB').update({ lastUpdated: new Date() }).match({ id: notionId });
-
-  // if (error) {
-  //   throw error
-  // }
+  for (const [key, value] of dataMap) {
+    notionObjectToDelete.push(key);
+  }
+  // remove all the notion object that are in notionObjectToDelete in a bulk request
+  supabaseClient.from('NotionObject').delete().in('id', notionObjectToDelete);
+  // insert all the notion object that are in notionObjectToInsert in a bulk request
+  supabaseClient.from('NotionObject').insert(notionObjectToInsert);
+  for (const projectData of projectsToInsert) {
+    projectTableData.push({
+      id: projectData.id,
+      title: projectData.title,
+      description: projectData.description,
+      links: projectData.links
+    });
+    projectData.techstacks.forEach((techstack) => {
+      projectTechStackRelationData.push({
+        project: projectData.id,
+        projectTechStack: techstack.id
+      });
+    });
+    // TODO: process the image data too
+  }
+  supabaseClient.from('Project').insert(projectTableData);
+  supabaseClient.from('ProjectTechStackRelations').insert(projectTechStackRelationData);
 }
 
+// TODO update logic for tags
 const updateArticles = async (DBNotionId: string) => {
 }
 
-const updateTechstack = async (techstacks: TechstackOption[]) => {
-  const { data, error } = await supabaseClient.from('ProjectTechStack').select()
-
+type TechstackTableRow = {
+  id: string;
+  label: string;
 }
+const updateTechstack = async (techstacks: TechstackOption[]) => {
+  // Fetch current techstacks from the database
+  const { data: currentTechstacks, error } = await supabaseClient
+    .from('ProjectTechStack')
+    .select();
+
+  if (error) {
+    console.error('Error fetching techstacks:', error);
+    return;
+  }
+
+  const operations = {
+    add: [] as TechstackTableRow[],
+    update: [] as TechstackTableRow[],
+    delete: [] as string[],
+  };
+
+  const currentTechstackMap = new Map(
+    currentTechstacks.map((techstack: TechstackTableRow) => [
+      techstack.id,
+      techstack,
+    ])
+  );
+
+  const incomingTechstackMap = new Map(
+    techstacks.map((techstack) => [techstack.id, techstack])
+  );
+
+  // Compare and identify add, update, and delete operations
+  techstacks.forEach((incomingTechstackTemp) => {
+    const incomingTechstack = {id: incomingTechstackTemp.id, label: incomingTechstackTemp.name} as TechstackTableRow;
+
+    const currentTechstack = currentTechstackMap.get(incomingTechstack.id);
+    if (!currentTechstack) {
+      // Techstack is not in the database, add it
+      operations.add.push(incomingTechstack);
+    } else if (currentTechstack.label !== incomingTechstack.label) {
+      // Techstack exists but the label has changed, update it
+      operations.update.push(incomingTechstack);
+    }
+    // If the techstack is the same, no action is needed
+  });
+
+  // Identify techstacks to delete (those in the database but not in the incoming list)
+  currentTechstacks.forEach((currentTechstack: TechstackOption) => {
+    if (!incomingTechstackMap.has(currentTechstack.id)) {
+      operations.delete.push(currentTechstack.id);
+    }
+  });
+
+  // Perform batch operations in the database
+  if (operations.add.length > 0) {
+    const { error: addError } = await supabaseClient
+      .from('ProjectTechStack')
+      .insert(operations.add);
+
+    if (addError) {
+      console.error('Error adding techstacks:', addError);
+    }
+  }
+
+  if (operations.update.length > 0) {
+    await Promise.all(
+      operations.update.map((techstack) =>
+        supabaseClient
+          .from('ProjectTechStack')
+          .update({ label: techstack.label })
+          .eq('techstack', techstack.techstack)
+      )
+    );
+  }
+
+  if (operations.delete.length > 0) {
+    const { error: deleteError } = await supabaseClient
+      .from('ProjectTechStack')
+      .delete()
+      .in('techstack', operations.delete);
+
+    if (deleteError) {
+      console.error('Error deleting techstacks:', deleteError);
+    }
+  }
+};
 
 const updateArticleTag = async (tags: ArticleTagOption[]) => {
   const { data, error } = await supabaseClient.from('ArticleTag').select()

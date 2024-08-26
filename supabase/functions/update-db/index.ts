@@ -98,7 +98,7 @@ function parseProjectQueryData(response: any): ProjectQueryData[] {
     const techstacks: TechstackOption[] = page.properties.Techstack.multi_select.map(
       (option: any) => ({
         id: option.id,
-        name: option.name,
+        label: option.name,
       })
     );
 
@@ -168,8 +168,121 @@ function parseArticleData(request: any): ArticlePropertyData {
 //   });
 //   return results;
 // }
-function parseArticleQueryData(request: any): any {
+
+
+type ArticleQueryData = {
+  id: string;
+  createdTime: string;
+  lastEditedTime: string;
+  tags: ArticleTagOption[];
+  series: ArticleSeriesOption | null;
+  title: string;
+  description: string;
+};
+
+function parseArticleQueryData(response: any): ArticleQueryData[] {
+  return response.results.map((page: any): ArticleQueryData => {
+    const tags: ArticleTagOption[] = page.properties.tag.multi_select.map(
+      (option: any) => ({
+        id: option.id,
+        label: option.name,
+      } as ArticleTagOption)
+    );
+
+    const title = page.properties.title.title
+      .map((text: any) => text.plain_text)
+      .join(" ");
+
+    const description = page.properties.Description.rich_text
+      .map((text: any) => text.plain_text)
+      .join(" ");
+
+    const series = page.properties.series.select ? {
+      id: page.properties.series.select.id,
+      label: page.properties.series.select.name
+    } as ArticleSeriesOption : null;
+
+    return {
+      id: page.id,
+      createdTime: page.created_time,
+      lastEditedTime: page.last_edited_time,
+      tags: tags,
+      series: series,
+      title: title,
+      description: description
+    };
+  });
 }
+
+const updateArticles = async (DBNotionId: string) => {
+  try {
+    // Fetch current data from Supabase
+    const { data: supabaseArticleData, error: fetchError } = await supabaseClient
+      .from('NotionObject')
+      .select('*')
+      .eq('database', DBNotionId);
+
+    if (fetchError) {
+      throw new Error(`Error fetching Supabase data: ${fetchError.message}`);
+    }
+
+    // Query Notion database and parse the response
+    const rawNotionDBData = await queryDB(DBNotionId);
+    const notionDBData = parseArticleQueryData(rawNotionDBData);
+
+    // Create a map of current Supabase data
+    const dataMap: Map<string, NotionObjectRow> = new Map(
+      supabaseArticleData.map((row: any) => [row.id, row])
+    );
+
+    // Prepare arrays for batch operations
+    const notionObjectToDelete: string[] = [];
+    const notionObjectToInsert: NotionObjectRow[] = [];
+    const articleTableData: ArticleTableRow[] = [];
+    const articleTagRelationData: ArticleTagRelationsRow[] = [];
+
+    // Process the Notion database data
+    for (const articleData of notionDBData) {
+      const id = articleData.id;
+      const supabaseRow = dataMap.get(id);
+
+      if (supabaseRow) {
+        if (new Date(supabaseRow.lastUpdated) < new Date(articleData.lastEditedTime)) {
+          // Update: Mark the outdated row for deletion and prepare the new data for insertion
+          notionObjectToDelete.push(id);
+          notionObjectToInsert.push({
+            id,
+            type: 'Article',
+            lastUpdated: new Date(articleData.lastEditedTime),
+            database: DBNotionId,
+          });
+        }
+        dataMap.delete(id); // Remove from map after processing
+      } else {
+        // Insert: New article data that isn't in Supabase yet
+        notionObjectToInsert.push({
+          id,
+          type: 'Article',
+          lastUpdated: new Date(articleData.lastEditedTime),
+          database: DBNotionId,
+        });
+      }
+
+      // Prepare data for Article and ArticleTagRelations tables
+      articleTableData.push({
+        id: articleData.id,
+        title: articleData.title,
+        description: articleData.description,
+        tags: articleData.tags, // Store as JSONB directly
+        series: articleData.series,
+      });
+    }
+  } catch (error) {
+    console.error('Error updating projects:', error);
+
+  }
+
+};
 
 type NotionObjectRow = {
   id: string;
@@ -312,9 +425,6 @@ const updateProjects = async (DBNotionId: string) => {
   }
 };
 
-// TODO update logic for tags
-const updateArticles = async (DBNotionId: string) => {
-}
 
 type TechstackTableRow = {
   id: string;

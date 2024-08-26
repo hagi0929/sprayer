@@ -185,74 +185,126 @@ type ProjectTechstackRelationsRow = {
 }
 
 const updateProjects = async (DBNotionId: string) => {
-  const { supabaseProjectData, error } = await supabaseClient.from("NotionObject").select('*').eq('database', DBNotionId);
-  if (error) {
-    throw error
-  }
-  const rawNotionDBData = await queryDB(DBNotionId);
-  const notionDBData = parseProjectQueryData(rawNotionDBData);
-  console.log(notionDBData);
-  console.log("sdfsdsfd");
+  try {
+    // Fetch current data from Supabase
+    const { data: supabaseProjectData, error: fetchError } = await supabaseClient
+      .from('NotionObject')
+      .select('*')
+      .eq('database', DBNotionId);
 
-  const dataMap = new Map();
-  for (const row of supabaseProjectData) {
-    dataMap.set(row['id'], row);
-  }
+    if (fetchError) {
+      throw new Error(`Error fetching Supabase data: ${fetchError.message}`);
+    }
 
-  const notionObjectToDelete = [];
-  const notionObjectToInsert: NotionObjectRow[] = [];
-  const projectTableData: ProjectTableRow[] = [];
-  const projectTechStackRelationData: ProjectTechstackRelationsRow[] = [];
-  const projectsToInsert: ProjectQueryData[] = [];
-  for (const projectData of notionDBData) {
-    const id = projectData['id'];
-    const supabaseRow = dataMap.get(id);
-    if (supabaseRow) {
-      if (new Date(supabaseRow['lastUpdated']) < new Date(projectData.lastEditedTime)) {
-        notionObjectToDelete.push(id);
+    // Query Notion database and parse the response
+    const rawNotionDBData = await queryDB(DBNotionId);
+    const notionDBData = parseProjectQueryData(rawNotionDBData);
+
+    // Create a map of current Supabase data
+    const dataMap = new Map(supabaseProjectData.map((row: any) => [row.id, row]));
+
+    // Prepare arrays for batch operations
+    const notionObjectToDelete = [];
+    const notionObjectToInsert: NotionObjectRow[] = [];
+    const projectTableData: ProjectTableRow[] = [];
+    const projectTechStackRelationData: ProjectTechstackRelationsRow[] = [];
+
+    // Process the Notion database data
+    for (const projectData of notionDBData) {
+      const id = projectData.id;
+      const supabaseRow = dataMap.get(id);
+
+      if (supabaseRow) {
+        if (new Date(supabaseRow.lastUpdated) < new Date(projectData.lastEditedTime)) {
+          // Update: Mark the outdated row for deletion and prepare the new data for insertion
+          notionObjectToDelete.push(id);
+          notionObjectToInsert.push({
+            id,
+            type: 'Project',
+            lastUpdated: new Date(projectData.lastEditedTime),
+            database: DBNotionId,
+          });
+        }
+        dataMap.delete(id); // Remove from map after processing
+      } else {
+        // Insert: New project data that isn't in Supabase yet
         notionObjectToInsert.push({
-          id: id,
+          id,
           type: 'Project',
           lastUpdated: new Date(projectData.lastEditedTime),
-          database: DBNotionId
-        } as NotionObjectRow);
-        dataMap.delete(id);
+          database: DBNotionId,
+        });
       }
-    } else {
-      notionObjectToDelete.push(id);
-      notionObjectToInsert.push({
-        id: id,
-        type: 'Project',
-        lastUpdated: new Date(projectData.lastEditedTime),
-        database: DBNotionId
-      } as NotionObjectRow);
-    }
-  }
-  for (const [key, value] of dataMap) {
-    notionObjectToDelete.push(key);
-  }
-  // remove all the notion object that are in notionObjectToDelete in a bulk request
-  supabaseClient.from('NotionObject').delete().in('id', notionObjectToDelete);
-  // insert all the notion object that are in notionObjectToInsert in a bulk request
-  supabaseClient.from('NotionObject').insert(notionObjectToInsert);
-  for (const projectData of projectsToInsert) {
-    projectTableData.push({
-      id: projectData.id,
-      title: projectData.title,
-      description: projectData.description,
-      links: projectData.links
-    });
-    projectData.techstacks.forEach((techstack) => {
-      projectTechStackRelationData.push({
-        project: projectData.id,
-        projectTechStack: techstack.id
+
+      // Prepare data for Project and ProjectTechStackRelations tables
+      projectTableData.push({
+        id: projectData.id,
+        title: projectData.title,
+        description: projectData.description,
+        links: projectData.links,
       });
-    });
-    // TODO: process the image data too
+
+      projectData.techstacks.forEach((techstack) => {
+        projectTechStackRelationData.push({
+          project: projectData.id,
+          projectTechStack: techstack.id,
+        });
+      });
+
+      // TODO: Handle image data if necessary
+    }
+
+    // Any remaining items in dataMap should be deleted
+    for (const [id] of dataMap) {
+      notionObjectToDelete.push(id);
+    }
+
+    // Perform batch operations
+    if (notionObjectToDelete.length > 0) {
+      const { error: deleteError } = await supabaseClient
+        .from('NotionObject')
+        .delete()
+        .in('id', notionObjectToDelete);
+
+      if (deleteError) {
+        console.error('Error deleting outdated Notion objects:', deleteError);
+      }
+    }
+
+    if (notionObjectToInsert.length > 0) {
+      const { error: insertError } = await supabaseClient
+        .from('NotionObject')
+        .insert(notionObjectToInsert);
+
+      if (insertError) {
+        console.error('Error inserting new Notion objects:', insertError);
+      }
+    }
+
+    if (projectTableData.length > 0) {
+      const { error: projectInsertError } = await supabaseClient
+        .from('Project')
+        .insert(projectTableData);
+
+      if (projectInsertError) {
+        console.error('Error inserting into Project table:', projectInsertError);
+      }
+    }
+
+    if (projectTechStackRelationData.length > 0) {
+      const { error: relationInsertError } = await supabaseClient
+        .from('ProjectTechStackRelations')
+        .insert(projectTechStackRelationData);
+
+      if (relationInsertError) {
+        console.error('Error inserting into ProjectTechStackRelations table:', relationInsertError);
+      }
+    }
+
+  } catch (error) {
+    console.error('Error updating projects:', error);
   }
-  supabaseClient.from('Project').insert(projectTableData);
-  supabaseClient.from('ProjectTechStackRelations').insert(projectTechStackRelationData);
-}
+};
 
 // TODO update logic for tags
 const updateArticles = async (DBNotionId: string) => {
@@ -279,7 +331,7 @@ const updateTechstack = async (techstacks: TechstackOption[]) => {
     delete: [] as string[],
   };
 
-  const currentTechstackMap = new Map(
+  const currentTechstackMap : Map<string, TechstackTableRow>= new Map(
     currentTechstacks.map((techstack: TechstackTableRow) => [
       techstack.id,
       techstack,
@@ -329,7 +381,7 @@ const updateTechstack = async (techstacks: TechstackOption[]) => {
         supabaseClient
           .from('ProjectTechStack')
           .update({ label: techstack.label })
-          .eq('techstack', techstack.techstack)
+          .eq('techstack', techstack.id)
       )
     );
   }
@@ -338,7 +390,7 @@ const updateTechstack = async (techstacks: TechstackOption[]) => {
     const { error: deleteError } = await supabaseClient
       .from('ProjectTechStack')
       .delete()
-      .in('techstack', operations.delete);
+      .in('id', operations.delete);
 
     if (deleteError) {
       console.error('Error deleting techstacks:', deleteError);

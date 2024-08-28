@@ -177,11 +177,11 @@ type ArticleQueryData = {
   tags: ArticleTagOption[];
   series: ArticleSeriesOption | null;
   title: string;
-  description: string;
 };
 
 function parseArticleQueryData(response: any): ArticleQueryData[] {
-  return response.results.map((page: any): ArticleQueryData => {
+  
+  return response.results.map((page: any): ArticleQueryData => {  
     const tags: ArticleTagOption[] = page.properties.tag.multi_select.map(
       (option: any) => ({
         id: option.id,
@@ -190,10 +190,6 @@ function parseArticleQueryData(response: any): ArticleQueryData[] {
     );
 
     const title = page.properties.title.title
-      .map((text: any) => text.plain_text)
-      .join(" ");
-
-    const description = page.properties.Description.rich_text
       .map((text: any) => text.plain_text)
       .join(" ");
 
@@ -209,9 +205,19 @@ function parseArticleQueryData(response: any): ArticleQueryData[] {
       tags: tags,
       series: series,
       title: title,
-      description: description
     };
   });
+}
+
+type ArticleTableRow = {
+  id: string;
+  title: string;
+  description: string;
+  links: Link[];
+}
+type ArticleTagRelationsRow = {
+  project: string;
+  projectTechStack: string;
 }
 
 const updateArticles = async (DBNotionId: string) => {
@@ -229,7 +235,7 @@ const updateArticles = async (DBNotionId: string) => {
     // Query Notion database and parse the response
     const rawNotionDBData = await queryDB(DBNotionId);
     const notionDBData = parseArticleQueryData(rawNotionDBData);
-
+    
     // Create a map of current Supabase data
     const dataMap: Map<string, NotionObjectRow> = new Map(
       supabaseArticleData.map((row: any) => [row.id, row])

@@ -49,6 +49,7 @@ type ArticleTagOption = {
 
 type ProjectPropertyData = {
   techstack: TechstackOption[];
+  projectCategory: ProjectCategoryOption[];
   lastEditedTime: string;
 };
 
@@ -75,10 +76,13 @@ function parseProjectData(request: any): ProjectPropertyData {
     id: option.id,
     name: option.name,
   }));
-
+  const projectCategory = request.properties.Category.multi_select.options.map((option: any) => ({
+    id: option.id,
+    label: option.name,
+  }));
   const lastEditedTime = request.last_edited_time;
 
-  return { techstack, lastEditedTime };
+  return { techstack, projectCategory, lastEditedTime };
 }
 
 type ProjectQueryData = {
@@ -157,18 +161,6 @@ function parseArticleData(request: any): ArticlePropertyData {
   return { tags, series, lastEditedTime };
 }
 
-// const parseNotionQueryData = (data) => {
-//   const results = data.results.map((page) => {
-//     const properties = page.properties;
-//     const obj = {};
-//     for (const key in properties) {
-//       obj[key] = properties[key].title[0].plain_text;
-//     }
-//     return obj;
-//   });
-//   return results;
-// }
-
 
 type ArticleQueryData = {
   id: string;
@@ -180,8 +172,8 @@ type ArticleQueryData = {
 };
 
 function parseArticleQueryData(response: any): ArticleQueryData[] {
-  
-  return response.results.map((page: any): ArticleQueryData => {  
+
+  return response.results.map((page: any): ArticleQueryData => {
     const tags: ArticleTagOption[] = page.properties.tag.multi_select.map(
       (option: any) => ({
         id: option.id,
@@ -211,15 +203,28 @@ function parseArticleQueryData(response: any): ArticleQueryData[] {
 
 type ArticleTableRow = {
   id: string;
+  label: string;
+  blocks: JSON;
   title: string;
-  description: string;
-  links: Link[];
+  created: Date;
+  series: string | null;
 }
 type ArticleTagRelationsRow = {
-  project: string;
-  projectTechStack: string;
+  article: string;
+  articleTag: string;
 }
 
+const getChildBlocks = async (blockId: string) => {
+  const { data, error } = await notionClient.client.blocks.children.list({
+    block_id: blockId,
+  });
+
+  if (error) {
+    throw new Error(`Error fetching block children: ${error.message}`);
+  }
+
+  return data;
+}
 const updateArticles = async (DBNotionId: string) => {
   try {
     // Fetch current data from Supabase
@@ -227,6 +232,7 @@ const updateArticles = async (DBNotionId: string) => {
       .from('NotionObject')
       .select('*')
       .eq('database', DBNotionId);
+    console.log("supabaseArticleData", supabaseArticleData);
 
     if (fetchError) {
       throw new Error(`Error fetching Supabase data: ${fetchError.message}`);
@@ -235,7 +241,7 @@ const updateArticles = async (DBNotionId: string) => {
     // Query Notion database and parse the response
     const rawNotionDBData = await queryDB(DBNotionId);
     const notionDBData = parseArticleQueryData(rawNotionDBData);
-    
+
     // Create a map of current Supabase data
     const dataMap: Map<string, NotionObjectRow> = new Map(
       supabaseArticleData.map((row: any) => [row.id, row])
@@ -247,45 +253,98 @@ const updateArticles = async (DBNotionId: string) => {
     const articleTableData: ArticleTableRow[] = [];
     const articleTagRelationData: ArticleTagRelationsRow[] = [];
 
+    console.log(`notionDBData`, notionDBData);
+
     // Process the Notion database data
     for (const articleData of notionDBData) {
       const id = articleData.id;
       const supabaseRow = dataMap.get(id);
+      dataMap.delete(id);
 
-      if (supabaseRow) {
-        if (new Date(supabaseRow.lastUpdated) < new Date(articleData.lastEditedTime)) {
-          // Update: Mark the outdated row for deletion and prepare the new data for insertion
+      if (!supabaseRow || new Date(supabaseRow.lastUpdated) < new Date(articleData.lastEditedTime)) {
+
+        if (supabaseRow) {
           notionObjectToDelete.push(id);
-          notionObjectToInsert.push({
-            id,
-            type: 'Article',
-            lastUpdated: new Date(articleData.lastEditedTime),
-            database: DBNotionId,
-          });
         }
-        dataMap.delete(id); // Remove from map after processing
-      } else {
-        // Insert: New article data that isn't in Supabase yet
+        // Update: Mark the outdated row for deletion and prepare the new data for insertion
+
         notionObjectToInsert.push({
           id,
           type: 'Article',
           lastUpdated: new Date(articleData.lastEditedTime),
           database: DBNotionId,
         });
-      }
+        const blocks = await getChildBlocks(id);
+        articleData.tags.forEach((tag) => {
+          articleTagRelationData.push({
+            article: articleData.id,
+            articleTag: tag.id,
+          });
+        });
+        articleTableData.push({
+          id: articleData.id,
+          label: articleData.title,
+          blocks: blocks,
+          title: articleData.title,
+          created: new Date(articleData.createdTime),
+          series: articleData.series?.id,
+        } as ArticleTableRow);
 
-      // Prepare data for Article and ArticleTagRelations tables
-      articleTableData.push({
-        id: articleData.id,
-        title: articleData.title,
-        description: articleData.description,
-        tags: articleData.tags, // Store as JSONB directly
-        series: articleData.series,
-      });
+      }
     }
+
+    // Any remaining items in dataMap should be deleted
+    for (const [id] of dataMap) {
+      notionObjectToDelete.push(id);
+    }
+    console.log("notionObjectToDelete", notionObjectToDelete);
+
+    // Perform batch operations
+    if (notionObjectToDelete.length > 0) {
+      const { error: deleteError } = await supabaseClient
+        .from('NotionObject')
+        .delete()
+        .in('id', notionObjectToDelete);
+
+      if (deleteError) {
+        console.error('Error deleting outdated Notion objects:', deleteError);
+      }
+    }
+
+    if (notionObjectToInsert.length > 0) {
+      const { error: insertError } = await supabaseClient
+        .from('NotionObject')
+        .insert(notionObjectToInsert);
+
+      if (insertError) {
+        console.error('Error inserting new Notion objects:', insertError);
+      }
+    }
+
+    if (articleTableData.length > 0) {
+      const { error: articleInsertError } = await supabaseClient
+        .from('Article')
+        .insert(articleTableData);
+
+      if (articleInsertError) {
+        console.error('Error inserting into Article table:', articleInsertError);
+      }
+    }
+
+    if (articleTagRelationData.length > 0) {
+      const { error: relationInsertError } = await supabaseClient
+        .from('ArticleTagRelations')
+        .insert(articleTagRelationData);
+
+      if (relationInsertError) {
+        console.error('Error inserting into ArticleTagRelations table:', relationInsertError);
+      }
+    }
+    console.log('Articles updated successfully!');
+
+    // Prepare data for Article and ArticleTagRelations tables
   } catch (error) {
     console.error('Error updating projects:', error);
-
   }
 
 };
@@ -338,45 +397,36 @@ const updateProjects = async (DBNotionId: string) => {
     for (const projectData of notionDBData) {
       const id = projectData.id;
       const supabaseRow = dataMap.get(id);
+      dataMap.delete(id);
 
-      if (supabaseRow) {
-        if (new Date(supabaseRow.lastUpdated) < new Date(projectData.lastEditedTime)) {
-          // Update: Mark the outdated row for deletion and prepare the new data for insertion
+      if (!supabaseRow || new Date(supabaseRow.lastUpdated) < new Date(projectData.lastEditedTime)) {
+        // Update: Mark the outdated row for deletion and prepare the new data for insertion
+        if (supabaseRow) {
           notionObjectToDelete.push(id);
-          notionObjectToInsert.push({
-            id,
-            type: 'Project',
-            lastUpdated: new Date(projectData.lastEditedTime),
-            database: DBNotionId,
-          });
         }
-        dataMap.delete(id); // Remove from map after processing
-      } else {
-        // Insert: New project data that isn't in Supabase yet
+
         notionObjectToInsert.push({
           id,
           type: 'Project',
           lastUpdated: new Date(projectData.lastEditedTime),
           database: DBNotionId,
         });
+        projectTableData.push({
+          id: projectData.id,
+          title: projectData.title,
+          description: projectData.description,
+          links: projectData.links,
+        });
+
+        projectData.techstacks.forEach((techstack) => {
+          projectTechStackRelationData.push({
+            project: projectData.id,
+            projectTechStack: techstack.id,
+          });
+        });
+
       }
 
-      // Prepare data for Project and ProjectTechStackRelations tables
-      projectTableData.push({
-        id: projectData.id,
-        title: projectData.title,
-        description: projectData.description,
-        links: projectData.links, // Store as JSONB directly
-      });
-
-      projectData.techstacks.forEach((techstack) => {
-        projectTechStackRelationData.push({
-          project: projectData.id,
-          projectTechStack: techstack.id,
-        });
-      });
-
-      // TODO: Handle image data if necessary
     }
 
     // Any remaining items in dataMap should be deleted
@@ -384,7 +434,6 @@ const updateProjects = async (DBNotionId: string) => {
       notionObjectToDelete.push(id);
     }
 
-    // Perform batch operations
     if (notionObjectToDelete.length > 0) {
       const { error: deleteError } = await supabaseClient
         .from('NotionObject')
@@ -688,6 +737,94 @@ const updateArticleSeries = async (series: ArticleSeriesOption[]) => {
   }
 };
 
+type ProjectCategoryOption = {
+  id: string;
+  label: string;
+}
+
+const updateProjectCategory = async (incomingCategories: ProjectCategoryOption[]) => {
+  // Fetch current category from the database
+  const { data: currentCategories, error } = await supabaseClient.from('ProjectCategory').select();
+  if (error) {
+    console.error('Error fetching article series:', error);
+    return;
+  }
+
+  const operations = {
+    add: [] as ProjectCategoryOption[],
+    update: [] as ProjectCategoryOption[],
+    delete: [] as string[],
+  };
+
+  const currentCategoryMap = new Map(
+    currentCategories.map((item: ProjectCategoryOption) => [item.id, item])
+  );
+
+  const incomingCategoryMap = new Map(
+    incomingCategories.map((item) => [item.id, item])
+  );
+
+  // Compare and identify add, update, and delete operations
+  incomingCategories.forEach((incomingItem) => {
+    const currentItem = currentCategoryMap.get(incomingItem.id);
+
+    if (!currentItem) {
+      // Category is not in the database, add it
+      operations.add.push(incomingItem);
+    } else if (currentItem.label !== incomingItem.label) {
+      // Category exists but the label has changed, update it
+      operations.update.push(incomingItem);
+    }
+    // If the category is the same, no action is needed
+  });
+
+  // Identify category to delete (those in the database but not in the incoming list)
+
+  currentCategories.forEach((currentItem: ProjectCategoryOption) => {
+    if (!incomingCategoryMap.has(currentItem.id)) {
+      operations.delete.push(currentItem.id);
+    }
+  });
+
+  // Perform batch operations in the database
+  if (operations.add.length > 0) {
+    const { error: addError } = await supabaseClient
+      .from('ProjectCategory')
+      .insert(operations.add);
+
+    if (addError) {
+      console.error('Error adding project category:', addError);
+    }
+  }
+
+  if (operations.update.length > 0) {
+    const { error: updateError } = await Promise.all(
+      operations.update.map((item) =>
+        supabaseClient
+          .from('ProjectCategory')
+          .update({ label: item.label })
+          .eq('id', item.id)
+      )
+    );
+
+    if (updateError) {
+      console.error('Error updating project category:', updateError);
+    }
+  }
+
+  if (operations.delete.length > 0) {
+    const { error: deleteError } = await supabaseClient
+      .from('ProjectCategory')
+      .delete()
+      .in('id', operations.delete);
+
+    if (deleteError) {
+      console.error('Error deleting project category:', deleteError);
+    }
+  }
+}
+
+
 Deno.serve(async (req) => {
   const { name } = await req.json()
 
@@ -705,6 +842,7 @@ Deno.serve(async (req) => {
       const DBProperty = parseProjectData(notionDBData);
       if (lastUpdated === null || new Date(lastUpdated) < new Date(DBProperty.lastEditedTime)) {
         await updateTechstack(DBProperty.techstack);
+        await updateProjectCategory(DBProperty.projectCategory);
         await updateProjects(notionId);
       }
 

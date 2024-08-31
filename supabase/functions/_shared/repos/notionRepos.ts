@@ -1,23 +1,18 @@
 import { Client } from "npm:@notionhq/client";
 import { NotionRenderer } from "npm:@notion-render/client";
+import { ModuleChain } from "../utils.ts/modules.ts";
 
 export class NotionRepository {
-  notionClient: {
-    client: Client;
-    renderer: NotionRenderer;
-  };
 
-  constructor(notionClient: {
-    client: Client;
-    renderer: NotionRenderer;
-  }) {
-    this.notionClient = notionClient;
+  moduleChain: ModuleChain;
+  constructor(moduleChain: ModuleChain) {
+    this.moduleChain = moduleChain;
   }
   
   async retrieveDatabase(dbId: string) {
   
     try {
-      const response = await this.notionClient.client.databases.retrieve({ database_id: dbId });
+      const response = await this.moduleChain.notionClient.client.databases.retrieve({ database_id: dbId });
   
       return response;
     } catch (error) {
@@ -26,11 +21,11 @@ export class NotionRepository {
   }
   
   async queryDatabase(dbId: string) {
-    return await this.notionClient.client.databases.query({ database_id: dbId });
+    return await this.moduleChain.notionClient.client.databases.query({ database_id: dbId });
   }
 
   async getChildBlocks(blockId: string) {
-    return await this.notionClient.client.blocks.children.list({
+    return await this.moduleChain.notionClient.client.blocks.children.list({
       block_id: blockId,
     });
   }

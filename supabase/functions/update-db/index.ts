@@ -10,6 +10,9 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { NotionRepository } from "../_shared/repos/notionRepos.ts";
 import { SupabaseRepository } from "../_shared/repos/databaseRepos.ts";
 import { NotionDatabaseService } from "../_shared/services/notionDatabaseService.ts";
+import { ModuleChain } from "../_shared/utils.ts/modules.ts";
+import { PropertyService } from "../_shared/services/propertyService.ts";
+import { ItemService } from "../_shared/services/itemService.ts";
 console.log("Hello from Functions!")
 
 const client = new Client({
@@ -20,15 +23,29 @@ const notionClient = {
   client: client,
   renderer: new NotionRenderer({ client }),
 };
+
+
+const moduleChain = new ModuleChain()
+
 const supabaseClient = createClient(
   Deno.env.get('SSUPABASE_URL')!,
   Deno.env.get('SSUPABASE_SERVICE_ROLE_KEY')!
 )
 
-const notionRepos = new NotionRepository(notionClient);
-const supabaseRepos = new SupabaseRepository(supabaseClient);
 
-const notionDatabaseService = new NotionDatabaseService(notionRepos, supabaseRepos);
+const notionRepos = new NotionRepository(moduleChain);
+const supabaseRepos = new SupabaseRepository(moduleChain);
+
+const notionDatabaseService = new NotionDatabaseService(moduleChain);
+const itemService = new ItemService(moduleChain);
+const propertyService = new PropertyService(moduleChain);
+moduleChain
+  .addNotionClient(notionClient)
+  .addSupabaseClient(supabaseClient)
+  .addNotionRepos(notionRepos)
+  .addDatabaseRepos(supabaseRepos)
+  .addNotionDatabaseService(notionDatabaseService);
+
 Deno.serve(async (req) => {
   const { name } = await req.json()
 

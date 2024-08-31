@@ -2,17 +2,17 @@ import { Client } from "npm:@notionhq/client";
 import { NotionRenderer } from "npm:@notion-render/client";
 import { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { NotionDBColumn } from "../models/models.ts";
+import { ModuleChain } from "../utils.ts/modules.ts";
 
 export class SupabaseRepository {
-  supabaseClient: SupabaseClient<any, any, any>
-    ;
 
-  constructor(supabaseClient: SupabaseClient<any, any, any>) {
-    this.supabaseClient = supabaseClient;
+  moduleChain: ModuleChain;
+  constructor(moduleChain: ModuleChain) {
+    this.moduleChain = moduleChain;
   }
 
   async getNotionDBs() : Promise<NotionDBColumn[]> {
-    const { data: notionDBs, error: fetchError } = await this.supabaseClient
+    const { data: notionDBs, error: fetchError } = await this.moduleChain.supabaseClient
       .from('NotionDB')
       .select('*');
 
@@ -23,7 +23,7 @@ export class SupabaseRepository {
   }
 
   async getNotionObjectsWithDBId(dbId: string) {
-    const { data: supabaseArticleData, error: fetchError } = await this.supabaseClient
+    const { data: supabaseArticleData, error: fetchError } = await this.moduleChain.supabaseClient
       .from('NotionObject')
       .select('*')
       .eq('database', dbId);
@@ -35,7 +35,7 @@ export class SupabaseRepository {
   }
 
   async deleteNotionObjectsWithObjectIds(notionObjectIdsToDelete: string[]) {
-    const { error: deleteError } = await this.supabaseClient
+    const { error: deleteError } = await this.moduleChain.supabaseClient
       .from('NotionObject')
       .delete()
       .in('id', notionObjectIdsToDelete);
@@ -46,7 +46,7 @@ export class SupabaseRepository {
   }
 
   async insertNotionObjects(notionObjectsToInsert: any[]) {
-    const { error: insertError } = await this.supabaseClient
+    const { error: insertError } = await this.moduleChain.supabaseClient
       .from('NotionObject')
       .insert(notionObjectsToInsert);
     if (insertError) {
@@ -55,7 +55,7 @@ export class SupabaseRepository {
   }
 
   async insertItem(tableName: string, itemToInsert: any[]) {
-    const { error: insertError } = await this.supabaseClient
+    const { error: insertError } = await this.moduleChain.supabaseClient
       .from(tableName)
       .insert(itemToInsert);
     if (insertError) {
@@ -64,7 +64,7 @@ export class SupabaseRepository {
   }
 
   async insertProperties(tableName: string, propertyToInsert: any) {
-    const { error: insertError } = await this.supabaseClient
+    const { error: insertError } = await this.moduleChain.supabaseClient
       .from(tableName)
       .insert(propertyToInsert);
     if (insertError) {
@@ -75,7 +75,7 @@ export class SupabaseRepository {
   async updateProperties(tableName: string, propertiesToUpdate: any[]) {
     await Promise.all(
       propertiesToUpdate.map((techstack) =>
-        this.supabaseClient
+        this.moduleChain.supabaseClient
           .from(tableName)
           .update({ label: techstack.label })
           .eq('id', techstack.id)
@@ -84,7 +84,7 @@ export class SupabaseRepository {
   }
 
   async deleteProperties(tableName: string, propertyIdsToDelete: string[]) {
-    const { error: deleteError } = await this.supabaseClient
+    const { error: deleteError } = await this.moduleChain.supabaseClient
       .from(tableName)
       .delete()
       .in('id', propertyIdsToDelete);
@@ -96,7 +96,7 @@ export class SupabaseRepository {
 
 
   async insertItemPropertyRelations(tableName: string, itemToInsert: any) {
-    const { error: relationInsertError } = await this.supabaseClient
+    const { error: relationInsertError } = await this.moduleChain.supabaseClient
       .from(tableName)
       .insert(itemToInsert);
     if (relationInsertError) {

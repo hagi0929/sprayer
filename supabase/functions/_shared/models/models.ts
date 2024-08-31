@@ -33,6 +33,12 @@ export interface DBQueryDataModel {
   attributes: Record<string, any>;
 }
 
+export type DBOperations = {
+  add: any[];
+  update: any[];
+  delete: string[];
+}
+
 export interface ItemColumn {
   notionId: string;
   label: string;

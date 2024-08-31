@@ -8,7 +8,7 @@ import { Client } from "npm:@notionhq/client";
 import { NotionRenderer } from "npm:@notion-render/client";
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { NotionRepository } from "../_shared/repos/notionRepos.ts";
-import { SupabaseRepository } from "../_shared/repos/supabaseRepos.ts";
+import { SupabaseRepository } from "../_shared/repos/databaseRepos.ts";
 import { NotionDatabaseService } from "../_shared/services/notionDatabaseService.ts";
 console.log("Hello from Functions!")
 

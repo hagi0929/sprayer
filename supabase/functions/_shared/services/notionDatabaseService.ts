@@ -1,6 +1,6 @@
 import { DBQueryDataModel, DBRetriveDataModel, NotionDBColumn, NotionDBMetadata, PropertyColumn, UrlModel } from '../models/models.ts';
 import { NotionRepository } from '../repos/notionRepos.ts'
-import { SupabaseRepository } from '../repos/supabaseRepos.ts'
+import { SupabaseRepository } from '../repos/databaseRepos.ts'
 
 export class NotionDatabaseService {
   notionRepos: NotionRepository;

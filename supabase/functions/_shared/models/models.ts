@@ -5,12 +5,12 @@ enum NotionObjectType {
 
 export interface NotionDBMetadata {
   tableName: string;
-  propertyMap: { string: string }[];
-  attributeMap: { string: string }[];
+  propertyMap: Record<string, string>;
+  attributeMap: Record<string, string>;
 }
 
 export interface NotionDBColumn {
-  notionId: string;
+  databaseId: string;
   lastUpdated: Date;
   metadata: NotionDBMetadata;
 }
@@ -23,8 +23,8 @@ export interface NotionObjectColumn {
 
 export interface DBPropertyDataModel {
 
-  properties: { string: string }[];
-  attributes: { string: string }[];
+  properties: Record<string, string>;
+  attributes: Record<string, string>;
 }
 
 export interface ItemColumn {
@@ -34,9 +34,9 @@ export interface ItemColumn {
   metadata: JSON;
 }
 
-export interface PropertyColumn {
+export type PropertyColumn {
   notionId: string;
   label: string;
   propertyName: string;
-  metadata: JSON;
+  metadata: JSON | null;
 }

@@ -14,12 +14,19 @@ export class NotionDatabaseService {
   parsePropertyData(rawPropertyData: any): PropertyColumn[] {
     switch (rawPropertyData.type) {
       case "multi_select":
-        return rawPropertyData.multi_select.options.map((option: any) => {
-          notionId = option.id;
-          label = option.name;
-          propertyName = rawPropertyData.name;
-          metadata = option;
+        rawPropertyData.multi_select.options.map((option: any) => {
+          return {
+            notionId: option.id,
+            name: option.name,
+            metadata: null,
+          }
         });
+      case "select":
+        return [{
+          notionId: rawPropertyData.select.id,
+          name: rawPropertyData.select.name,
+          metadata: null,
+        }]
       default:
         []
     }
@@ -27,38 +34,74 @@ export class NotionDatabaseService {
   }
   parseRetrivedDBData(rawRetrivedDBData: any, DBMetadata: NotionDBMetadata) {
 
-    const properties = DBMetadata.propertyMap;
-    console.log(rawRetrivedDBData);
+    const propertyMap = DBMetadata.propertyMap
+    const attributeMap = DBMetadata.attributeMap
+    const resultPropertyMap: Record<string, PropertyColumn[]> = {};
+    const resultAttributeMap: Record<string, any> = {};
+    for (const property of rawRetrivedDBData.properties) {
+      if (propertyMap[property]) {
+        const propertyName = propertyMap[property];
+        const parsedPropertyData = this.parsePropertyData(rawRetrivedDBData.properties[property]);
+        if (resultPropertyMap[propertyName]) {
+          resultPropertyMap[propertyName].push(parsedPropertyData);
+        } else {
+          resultPropertyMap[propertyName] = [parsedPropertyData];
+        }
+      }
+      if (attributeMap[property]) {
+        const attributeName = attributeMap[property];
+        resultAttributeMap[attributeMap[property]] = [];
+      }
+    }
+    for (const [from, to] of Object.entries(propertyMap)) {
+      const rawPropertyData = rawRetrivedDBData.properties[from];
+      const parsedPropertyData = this.parsePropertyData(rawPropertyData);
+      parsedPropertyData.map((parsedData) => {
+        const obj = {
+          notionId: parsedData.notionId,
+          label: parsedData.name,
+          propertyName: to,
+          metadata: parsedData.metadata,
+        }
+        if (resultPropertyMap[to]) {
+          resultPropertyMap[to].push(obj);
+        } else {
+          resultPropertyMap[to] = [obj];
+        }
+      })
+    }
+    for (const [from, to] of Object.entries(attributeMap)) {
+      const rawPropertyData = rawRetrivedDBData.properties[from];
+      const parsedPropertyData = this.parsePropertyData(rawPropertyData);
+      parsedPropertyData.map((parsedData) => {
+        const obj = {
+          notionId: parsedData.notionId,
+          label: parsedData.name,
+          propertyName: to,
+          metadata: parsedData.metadata,
+        }
+        if (resultPropertyMap[to]) {
+          resultPropertyMap[to].push(obj);
+        } else {
+          resultPropertyMap[to] = [obj];
+        }
+      })
+    }
 
-    for (const property of properties) {
-      parsePropertyData(rawRetrivedDBData.properties[property])
-      parsedData.properties[property] = rawTrivedData.properties[property];
-    }
-    for (const attribute of attributes) {
-      parsedData.attributes[attribute] = rawTrivedData.properties[attribute];
-    }
-    return parsedData;
   }
   async updateNotionDBs(notionDB: NotionDBColumn) {
     // check the date
-    console.log("sdf");
+    console.log(notionDB);
 
-    const notionId = notionDB.notionId;
+    const databaseId = notionDB.databaseId;
     const DBMetadata = notionDB.metadata;
     const tableName = notionDB.metadata.tableName;
     const lastUpdated = notionDB.lastUpdated;
-    try {
-      console.log("notionDBDatasdf");
+    console.log("notionDBDatasdf", databaseId);
 
-      const notionDBData = await this.notionRepos.retrieveDatabase(notionId);
-      console.log("notionDBData");
-    }
-    catch (error) {
-      console.log('Error fetching Notion data:', error);
-      return;
-    }
-    const DBPropertyData = await this.parseRetrivedDBData(notionDBData, DBMetadata);
+    const notionDBData = await this.notionRepos.retrieveDatabase(databaseId);
+    console.log("notionDBData");
+    const DBPropertyData = this.parseRetrivedDBData(notionDBData, DBMetadata);
     console.log(DBPropertyData);
-    return "hello"
   }
 }

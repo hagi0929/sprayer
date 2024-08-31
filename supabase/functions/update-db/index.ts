@@ -38,8 +38,7 @@ Deno.serve(async (req) => {
 
   for (const notionDB of notionDBs) {
     console.log(notionDB);
-    
-    notionDatabaseService.updateNotionDBs(notionDB);
+    await notionDatabaseService.updateNotionDBs(notionDB);
   }
   return new Response(
     JSON.stringify("data"),

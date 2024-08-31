@@ -15,15 +15,12 @@ export class NotionRepository {
   }
   
   async retrieveDatabase(dbId: string) {
-    console.log('Starting to retrieve database:', dbId); // Log before the try-catch
   
     try {
       const response = await this.notionClient.client.databases.retrieve({ database_id: dbId });
-      console.log('Retrieving database:', dbId);
   
       return response;
     } catch (error) {
-      console.error('Error retrieving database:', error);
       throw error; // Rethrow the error to be handled by the calling function
     }
   }

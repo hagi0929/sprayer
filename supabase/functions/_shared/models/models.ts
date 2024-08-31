@@ -26,6 +26,9 @@ export interface DBRetriveDataModel {
   properties: Record<string, PropertyColumn[]>;
 }
 export interface DBQueryDataModel {
+  id: string;
+  lastUpdated: Date;
+  created: Date;
   properties: Record<string, PropertyColumn[]>;
   attributes: Record<string, any>;
 }

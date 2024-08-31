@@ -1,6 +1,7 @@
 import { Client } from "npm:@notionhq/client";
 import { NotionRenderer } from "npm:@notion-render/client";
 import { SupabaseClient } from "jsr:@supabase/supabase-js@2";
+import { NotionDBColumn } from "../models/models.ts";
 
 export class SupabaseRepository {
   supabaseClient: SupabaseClient<any, any, any>
@@ -10,7 +11,7 @@ export class SupabaseRepository {
     this.supabaseClient = supabaseClient;
   }
 
-  async getNotionDBs() : NotionDBColumn[] {
+  async getNotionDBs() : Promise<NotionDBColumn[]> {
     const { data: notionDBs, error: fetchError } = await this.supabaseClient
       .from('NotionDB')
       .select('*');

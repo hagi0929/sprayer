@@ -9,7 +9,7 @@ import { NotionRenderer } from "npm:@notion-render/client";
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { NotionRepository } from "../_shared/repos/notionRepos.ts";
 import { SupabaseRepository } from "../_shared/repos/supabaseRepos.ts";
-
+import { NotionDatabaseService } from "../_shared/services/notionDatabaseService.ts";
 console.log("Hello from Functions!")
 
 const client = new Client({
@@ -28,6 +28,7 @@ const supabaseClient = createClient(
 const notionRepos = new NotionRepository(notionClient);
 const supabaseRepos = new SupabaseRepository(supabaseClient);
 
+const notionDatabaseService = new NotionDatabaseService(notionRepos, supabaseRepos);
 Deno.serve(async (req) => {
   const { name } = await req.json()
 
@@ -35,32 +36,13 @@ Deno.serve(async (req) => {
 
   console.log(notionDBs);
 
-  for (const tableDB of data) {
-    const notionId = tableDB['id'];
-    const tableName = tableDB['tableName'];
-    const lastUpdated = tableDB['lastUpdated'];
-    const notionDBData = await notionRepos.retrieveDatabase(notionId);
-    if (tableName === 'Project') {
-      const DBProperty = parseProjectData(notionDBData);
-      if (lastUpdated === null || new Date(lastUpdated) < new Date(DBProperty.lastEditedTime)) {
-        await updateTechstack(DBProperty.techstack);
-        await updateProjectCategory(DBProperty.projectCategory);
-        await updateProjects(notionId);
-      }
-
-    } else if (tableName === 'Article') {
-      const DBProperty = parseArticleData(notionDBData);
-      if (lastUpdated === null || new Date(lastUpdated) < new Date(DBProperty.lastEditedTime)) {
-        await updateArticleTag(DBProperty.tags);
-        await updateArticleSeries(DBProperty.series);
-        await updateArticles(notionId);
-      }
-
-    }
-
+  for (const notionDB of notionDBs) {
+    console.log(notionDB);
+    
+    notionDatabaseService.updateNotionDBs(notionDB);
   }
   return new Response(
-    JSON.stringify(data),
+    JSON.stringify("data"),
     { headers: { "Content-Type": "application/json" } },
   )
 })

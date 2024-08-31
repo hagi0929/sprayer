@@ -21,22 +21,26 @@ export interface NotionObjectColumn {
   databaseId: string;
 }
 
-export interface DBPropertyDataModel {
-
-  properties: Record<string, string>;
-  attributes: Record<string, string>;
+export interface DBRetriveDataModel {
+  lastUpdated: Date;
+  properties: Record<string, PropertyColumn[]>;
+}
+export interface DBQueryDataModel {
+  properties: Record<string, PropertyColumn[]>;
+  attributes: Record<string, any>;
 }
 
 export interface ItemColumn {
   notionId: string;
   label: string;
   itemName: string;
-  metadata: JSON;
-}
-
-export type PropertyColumn {
-  notionId: string;
-  label: string;
-  propertyName: string;
   metadata: JSON | null;
 }
+
+export type PropertyColumn = {
+  notionId: string;
+  label: string;
+  propertyName?: string;
+  metadata: JSON | null;
+}
+

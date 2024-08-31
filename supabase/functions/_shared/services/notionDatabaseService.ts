@@ -1,4 +1,4 @@
-import { NotionDBColumn, NotionDBMetadata, PropertyColumn } from '../models/models.ts';
+import { DBPropertyDataModel, DBQueryDataModel, NotionDBColumn, NotionDBMetadata, PropertyColumn, UrlModel } from '../models/models.ts';
 import { NotionRepository } from '../repos/notionRepos.ts'
 import { SupabaseRepository } from '../repos/supabaseRepos.ts'
 
@@ -14,81 +14,116 @@ export class NotionDatabaseService {
   parsePropertyData(rawPropertyData: any): PropertyColumn[] {
     switch (rawPropertyData.type) {
       case "multi_select":
-        rawPropertyData.multi_select.options.map((option: any) => {
+        return rawPropertyData.multi_select.options.map((option: any) => {
           return {
             notionId: option.id,
-            name: option.name,
+            label: option.name,
             metadata: null,
-          }
+          } as PropertyColumn
         });
       case "select":
         return [{
           notionId: rawPropertyData.select.id,
-          name: rawPropertyData.select.name,
+          label: rawPropertyData.select.name,
           metadata: null,
-        }]
+        }];
       default:
-        []
+        return [];
     }
-    return [];
   }
-  parseRetrivedDBData(rawRetrivedDBData: any, DBMetadata: NotionDBMetadata) {
+
+  parseAttributeData(rawPropertyData: any): any[] {
+    switch (rawPropertyData.type) {
+      case "multi_select":
+        return rawPropertyData.multi_select.options.map((option: any) => {
+          return option
+        });
+      case "rich_text":
+        return [rawPropertyData.rich_text
+          .map((text: any) => text.plain_text)
+          .join(" ")];
+      case "title":
+        return [rawPropertyData.title
+          .map((text: any) => text.plain_text)
+          .join(" ")];
+      case "select":
+        return [rawPropertyData.select];
+      case "url":
+        return [{
+          type: rawPropertyData.name,
+          url: rawPropertyData.url || "",
+        }];
+      default:
+        return [];
+    }
+  }
+
+  parseRetrivedDBData(rawRetrivedDBData: any, DBMetadata: NotionDBMetadata): DBPropertyDataModel {
 
     const propertyMap = DBMetadata.propertyMap
     const attributeMap = DBMetadata.attributeMap
     const resultPropertyMap: Record<string, PropertyColumn[]> = {};
     const resultAttributeMap: Record<string, any> = {};
-    for (const property of rawRetrivedDBData.properties) {
+    console.log("rawRetrivedDBData.properties", rawRetrivedDBData.properties);
+
+    for (const property in rawRetrivedDBData.properties) {
+      console.log("property", property);
+      console.log("propertyMap", propertyMap);
+      console.log("propertyMap[property]", propertyMap[property]);
+
       if (propertyMap[property]) {
         const propertyName = propertyMap[property];
         const parsedPropertyData = this.parsePropertyData(rawRetrivedDBData.properties[property]);
+        const i = parsedPropertyData.map((parsedData) => { return { ...parsedData, propertyName } });
         if (resultPropertyMap[propertyName]) {
-          resultPropertyMap[propertyName].push(parsedPropertyData);
+          resultPropertyMap[propertyName].concat(i);
         } else {
-          resultPropertyMap[propertyName] = [parsedPropertyData];
+          resultPropertyMap[propertyName] = i;
+        }
+      }
+    }
+    return {
+      lastUpdated: rawRetrivedDBData.last_edited_time,
+      properties: resultPropertyMap,
+    }
+  }
+
+  parseQueryDBData(rawRetrivedDBData: any, DBMetadata: NotionDBMetadata): DBQueryDataModel {
+    // console.log("rawRetrivedDBData", rawRetrivedDBData);
+
+    const propertyMap = DBMetadata.propertyMap
+    const attributeMap = DBMetadata.attributeMap
+    const resultPropertyMap: Record<string, PropertyColumn[]> = {};
+    const resultAttributeMap: Record<string, any> = {};
+    // console.log("rawRetrivedDBData.properties", rawRetrivedDBData.properties);
+
+    for (const property in rawRetrivedDBData.properties) {      
+      if (propertyMap[property]) {
+        const propertyName = propertyMap[property];
+        const parsedPropertyData = this.parsePropertyData(rawRetrivedDBData.properties[property]);
+        const i = parsedPropertyData.map((parsedData) => { return { ...parsedData, propertyName } });
+        if (resultPropertyMap[propertyName]) {
+          resultPropertyMap[propertyName].concat(i);
+        } else {
+          resultPropertyMap[propertyName] = i;
         }
       }
       if (attributeMap[property]) {
         const attributeName = attributeMap[property];
-        resultAttributeMap[attributeMap[property]] = [];
+        const parsedAttributeData = this.parseAttributeData(rawRetrivedDBData.properties[property]);
+        if (resultAttributeMap[attributeName]) {
+          resultAttributeMap[attributeName].concat(parsedAttributeData);
+        } else {
+          resultAttributeMap[attributeName] = parsedAttributeData;
+        }
       }
     }
-    for (const [from, to] of Object.entries(propertyMap)) {
-      const rawPropertyData = rawRetrivedDBData.properties[from];
-      const parsedPropertyData = this.parsePropertyData(rawPropertyData);
-      parsedPropertyData.map((parsedData) => {
-        const obj = {
-          notionId: parsedData.notionId,
-          label: parsedData.name,
-          propertyName: to,
-          metadata: parsedData.metadata,
-        }
-        if (resultPropertyMap[to]) {
-          resultPropertyMap[to].push(obj);
-        } else {
-          resultPropertyMap[to] = [obj];
-        }
-      })
+    return {
+      attributes: resultAttributeMap,
+      properties: resultPropertyMap,
     }
-    for (const [from, to] of Object.entries(attributeMap)) {
-      const rawPropertyData = rawRetrivedDBData.properties[from];
-      const parsedPropertyData = this.parsePropertyData(rawPropertyData);
-      parsedPropertyData.map((parsedData) => {
-        const obj = {
-          notionId: parsedData.notionId,
-          label: parsedData.name,
-          propertyName: to,
-          metadata: parsedData.metadata,
-        }
-        if (resultPropertyMap[to]) {
-          resultPropertyMap[to].push(obj);
-        } else {
-          resultPropertyMap[to] = [obj];
-        }
-      })
-    }
-
   }
+
   async updateNotionDBs(notionDB: NotionDBColumn) {
     // check the date
     console.log(notionDB);
@@ -97,11 +132,23 @@ export class NotionDatabaseService {
     const DBMetadata = notionDB.metadata;
     const tableName = notionDB.metadata.tableName;
     const lastUpdated = notionDB.lastUpdated;
-    console.log("notionDBDatasdf", databaseId);
 
     const notionDBData = await this.notionRepos.retrieveDatabase(databaseId);
-    console.log("notionDBData");
+    console.log("before", notionDBData);
+
     const DBPropertyData = this.parseRetrivedDBData(notionDBData, DBMetadata);
-    console.log(DBPropertyData);
+
+    console.log("after", DBPropertyData);
+
+    // TODO: Implement the following logic
+    const getPageContent = false;
+
+
+    if (!lastUpdated || lastUpdated < DBPropertyData.lastUpdated) {
+      const rawNotionQueryDBData = await this.notionRepos.queryDatabase(databaseId);
+      const notionQueryDBData = this.parseQueryDBData(rawNotionQueryDBData, DBMetadata);
+      console.log("sinuu", notionQueryDBData);
+
+    }
   }
 }

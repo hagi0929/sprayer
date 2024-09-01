@@ -7,8 +7,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { Client } from "npm:@notionhq/client";
 import { NotionRenderer } from "npm:@notion-render/client";
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { NotionRepository } from "../_shared/repos/notionRepos.ts";
-import { SupabaseRepository } from "../_shared/repos/databaseRepos.ts";
+import { NotionRepos } from "../_shared/repos/notionRepos.ts";
+import { DatabaseRepos } from "../_shared/repos/databaseRepos.ts";
 
 console.log("Hello from Functions!")
 
@@ -25,8 +25,8 @@ const supabaseClient = createClient(
   Deno.env.get('SSUPABASE_SERVICE_ROLE_KEY')!
 )
 
-const notionRepos = new NotionRepository(notionClient);
-const supabaseRepos = new SupabaseRepository(supabaseClient);
+const notionRepos = new NotionRepos(notionClient);
+const supabaseRepos = new DatabaseRepos(supabaseClient);
 
 
 

@@ -84,7 +84,6 @@ export function parseQueryDBData(rawRetrivedDBDatas: any, DBMetadata: NotionDBMe
     const attributeMap = DBMetadata.attributeMap
     const resultPropertyMap: Record<string, PropertyColumn[]> = {};
     const resultAttributeMap: Record<string, any> = {};
-    console.log("rawRetrivedDBData", rawRetrivedDBData);
 
     for (const property in rawRetrivedDBData.properties) {
       // console.log("propertyMap", propertyMap);

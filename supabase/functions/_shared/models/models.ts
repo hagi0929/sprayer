@@ -33,9 +33,9 @@ export interface DBQueryDataModel {
   attributes: Record<string, any>;
 }
 
-export type DBOperations = {
-  add: any[];
-  update: any[];
+export type DBOperations<OperationType> = {
+  add: OperationType[];
+  update: OperationType[];
   delete: string[];
 }
 
@@ -52,4 +52,9 @@ export type PropertyColumn = {
   propertyName?: string;
   metadata: JSON | null;
 }
+
+export type ItemPropertyRelationColumn = {
+  itemId: string;
+  propertyId: string;
+} 
 

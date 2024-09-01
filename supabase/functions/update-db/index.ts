@@ -7,55 +7,67 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { Client } from "npm:@notionhq/client";
 import { NotionRenderer } from "npm:@notion-render/client";
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { NotionRepository } from "../_shared/repos/notionRepos.ts";
-import { SupabaseRepository } from "../_shared/repos/databaseRepos.ts";
+import { NotionRepos } from "../_shared/repos/notionRepos.ts";
+import { DatabaseRepos } from "../_shared/repos/databaseRepos.ts";
 import { NotionDatabaseService } from "../_shared/services/notionDatabaseService.ts";
-import { ModuleChain } from "../_shared/utils.ts/modules.ts";
 import { PropertyService } from "../_shared/services/propertyService.ts";
 import { ItemService } from "../_shared/services/itemService.ts";
+
+import { Container } from "npm:inversify";
+
+
 console.log("Hello from Functions!")
 
 const client = new Client({
   auth: Deno.env.get('NOTION_API_KEY')
 });
 
-const notionClient = {
-  client: client,
-  renderer: new NotionRenderer({ client }),
-};
+container.bind<Katana>("Katana").toDynamicValue((context: interfaces.Context) => { return Promise.resolve(new Katana()); });
 
 
-const moduleChain = new ModuleChain()
-
+class NotionClient {
+  client: Client;
+  renderer: NotionRenderer;
+  constructor(client: Client) {
+    this.client = client;
+    this.renderer = new NotionRenderer({ client });
+  }
+}
 const supabaseClient = createClient(
   Deno.env.get('SSUPABASE_URL')!,
   Deno.env.get('SSUPABASE_SERVICE_ROLE_KEY')!
 )
 
 
-const notionRepos = new NotionRepository(moduleChain);
-const supabaseRepos = new SupabaseRepository(moduleChain);
+const container = new Container();
 
-const notionDatabaseService = new NotionDatabaseService(moduleChain);
-const itemService = new ItemService(moduleChain);
-const propertyService = new PropertyService(moduleChain);
-moduleChain
-  .addNotionClient(notionClient)
-  .addSupabaseClient(supabaseClient)
-  .addNotionRepos(notionRepos)
-  .addDatabaseRepos(supabaseRepos)
-  .addNotionDatabaseService(notionDatabaseService);
+// Register clients
+container.register('NotionClient', { useValue: notionClient });
+container.register('SupabaseClient', { useValue: supabaseClient });
+
+// Register services
+container.register('NotionRepos', { useClass: NotionRepos });
+container.register('DatabaseRepos', { useClass: DatabaseRepos });
+
+container.register('PropertyService', { useClass: PropertyService });
+container.register('ItemService', { useClass: ItemService });
+container.register('NotionDatabaseService', { useClass: NotionDatabaseService });
+
+const moduleChain = new ModuleChain(container);
+
+
+
 
 Deno.serve(async (req) => {
   const { name } = await req.json()
 
-  const notionDBs = await supabaseRepos.getNotionDBs();
+  const notionDBs = await moduleChain.databaseRepos.getNotionDBs();
 
-  console.log(notionDBs);
+  // console.log(notionDBs);
 
   for (const notionDB of notionDBs) {
-    console.log(notionDB);
-    await notionDatabaseService.updateNotionDBs(notionDB);
+    // console.log(notionDB);
+    await moduleChain.notionDatabaseService.updateNotionDBs(notionDB);
   }
   return new Response(
     JSON.stringify("data"),

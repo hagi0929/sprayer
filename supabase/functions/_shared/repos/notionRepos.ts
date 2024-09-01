@@ -1,11 +1,14 @@
 import { Client } from "npm:@notionhq/client";
 import { NotionRenderer } from "npm:@notion-render/client";
-import { ModuleChain } from "../utils.ts/modules.ts";
+import { DependencyContainer, ModuleChain } from "../utils/modules.ts";
+import { Service } from "npm:typedi";
 
-export class NotionRepository {
-
-  moduleChain: ModuleChain;
-  constructor(moduleChain: ModuleChain) {
+@Service()
+export class NotionRepos {
+  @Inject()
+  notionClient: any;
+  moduleChain: DependencyContainer;
+  constructor(moduleChain: DependencyContainer) {
     this.moduleChain = moduleChain;
   }
   

@@ -1,63 +1,53 @@
 import { PropertyColumn, DBOperations } from "../models/models.ts";
-import { ModuleChain } from "../utils.ts/modules.ts";
+import { DependencyContainer, ModuleChain } from "../utils/modules.ts";
 
 export class PropertyService {
-  moduleChain: ModuleChain;
-  constructor(moduleChain: ModuleChain) {
+  moduleChain: DependencyContainer;
+  constructor(moduleChain: DependencyContainer) {
     this.moduleChain = moduleChain;
   }
 
   updateProperties(
     currentProperties: Record<string, PropertyColumn[]>,
     incomingProperties: Record<string, PropertyColumn[]>
-  ): DBOperations {
-    const operations: DBOperations = {
+  ): DBOperations<PropertyColumn> {
+    const operations: DBOperations<PropertyColumn> = {
       add: [],
       update: [],
       delete: [],
     };
 
-    const currentPropertyMap = new Map<string, PropertyColumn[]>(
-      Object.entries(currentProperties)
-    );
+    // Create a map for quick lookup of current properties by notionId
+    const currentPropertyMap = new Map<string, PropertyColumn>();
+    for (const [propertyName, propertyColumns] of Object.entries(currentProperties)) {
+      for (const propertyColumn of propertyColumns) {
+        currentPropertyMap.set(propertyColumn.notionId, propertyColumn);
+      }
+    }
 
-    const incomingPropertyMap = new Map<string, PropertyColumn[]>(
-      Object.entries(incomingProperties)
-    );
+    // Process incoming properties
+    for (const [propertyName, incomingItems] of Object.entries(incomingProperties)) {
+      for (const incomingItem of incomingItems) {
+        const currentItem = currentPropertyMap.get(incomingItem.notionId);
 
-    // Compare and determine add, update, and delete operations for properties
-    for (const [propertyName, incomingItems] of incomingPropertyMap) {
-      const currentItems = currentPropertyMap.get(propertyName);
-
-      if (!currentItems) {
-        operations.add.push(...incomingItems);
-      } else {
-        for (const incomingItem of incomingItems) {
-          const currentItem = currentItems.find(item => item.notionId === incomingItem.notionId);
-
-          if (!currentItem) {
-            operations.add.push(incomingItem);
-          } else if (JSON.stringify(currentItem) !== JSON.stringify(incomingItem)) {
+        if (!currentItem) {
+          // Incoming item not found in current properties, add it
+          operations.add.push(incomingItem);
+        } else {
+          // Incoming item found in current properties, check if it needs an update
+          if (JSON.stringify(currentItem) !== JSON.stringify(incomingItem)) {
             operations.update.push(incomingItem);
           }
+          // Remove the processed current property from the map
+          currentPropertyMap.delete(incomingItem.notionId);
         }
       }
     }
 
-    // Identify properties to delete
-    for (const [propertyName, currentItems] of currentPropertyMap) {
-      const incomingItems = incomingPropertyMap.get(propertyName);
-
-      if (!incomingItems) {
-        operations.delete.push(...currentItems.map(item => item.notionId));
-      } else {
-        for (const currentItem of currentItems) {
-          if (!incomingItems.some(item => item.notionId === currentItem.notionId)) {
-            operations.delete.push(currentItem.notionId);
-          }
-        }
-      }
-    }
+    // Any remaining properties in currentPropertyMap are to be deleted
+    currentPropertyMap.forEach((currentItem) => {
+      operations.delete.push(currentItem.notionId);
+    });
 
     return operations;
   }

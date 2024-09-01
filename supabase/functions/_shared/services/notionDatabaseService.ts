@@ -29,7 +29,7 @@ export class NotionDatabaseService {
 
     const rawNotionQueryDBData = await this.moduleContainer.notionRepos.queryDatabase(databaseId);
     const notionQueryDBData = parseQueryDBData(rawNotionQueryDBData, DBMetadata);
-    console.log(databaseId);
+    console.log("propertyOperations", DBPropertyData);
 
     const { data: currentProperties, error } = await this.moduleContainer.supabaseClient.from("fullPropertyTable").select(
       `notionId, propertyName, metadata, label`
@@ -40,11 +40,13 @@ export class NotionDatabaseService {
     }
 
     const propertyOperations = this.moduleContainer.propertyService.updateProperties(currentProperties, DBPropertyData.properties);
+    console.log("propertyOperations", propertyOperations);
 
     if (propertyOperations.add.length > 0) {
-      console.log('Adding properties:', propertyOperations.add);
 
       const propertiesToInsert: PropertyColumn[] = propertyOperations.add;
+      console.log("propertiesToInsert", propertiesToInsert);
+      
       const notionObejctsToInsert: NotionObjectColumn[] = propertiesToInsert.map((property) => {
         return {
           notionId: property.notionId,
@@ -52,9 +54,10 @@ export class NotionDatabaseService {
           databaseId,
         } as NotionObjectColumn;
       });
+
       await this.moduleContainer.databaseRepos.insertNotionObjects(notionObejctsToInsert);
 
-      await this.moduleContainer.databaseRepos.insertProperties('Property', propertiesToInsert);
+      await this.moduleContainer.databaseRepos.insertProperties(propertiesToInsert);
     }
 
     if (propertyOperations.update.length > 0) {
@@ -78,10 +81,8 @@ export class NotionDatabaseService {
     const incomingItemMap = new Map<string, DBQueryDataModel>(
       notionQueryDBData.map((item) => [item.id, item])
     );
-    console.log('incomingItemMap', incomingItemMap);
 
     const itemOperations = this.moduleContainer.itemService.validateItems(currentItems, incomingItemMap, lastUpdated);
-    console.log('itemOperations', itemOperations);
 
     if (itemOperations.delete.length > 0) {
       await this.moduleContainer.databaseRepos.deleteNotionObjectsWithObjectIds(itemOperations.delete);
@@ -114,7 +115,6 @@ export class NotionDatabaseService {
           console.error(`Failed to find item with ID ${itemId}`);
           throw new Error(`Failed to find item with ID ${itemId}`);
         }
-        console.log("item", item);
 
         return {
           notionId: itemId,
@@ -123,11 +123,10 @@ export class NotionDatabaseService {
           metadata: item.attributes,
         } as ItemColumn;
       });
-      console.log('itemsToInsert', itemsToInsert);
-
+      
       await this.moduleContainer.databaseRepos.insertNotionObjects(notionObjectsToInsert);
-      await this.moduleContainer.databaseRepos.insertItem('Item', itemsToInsert);
-      await this.moduleContainer.databaseRepos.insertProperties('ItemPropertyRelation', propertyItemRelationsToInsert);
+      await this.moduleContainer.databaseRepos.insertItem(itemsToInsert);
+      await this.moduleContainer.databaseRepos.insertItemPropertyRelations(propertyItemRelationsToInsert);
     }
   }
 

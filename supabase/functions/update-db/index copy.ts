@@ -281,7 +281,7 @@ const updateArticles = async (DBNotionId: string) => {
     }
 
     if (articleTableData.length > 0) {
-      await supabaseRepos.insertItem('Article', articleTableData);
+      await supabaseRepos.insertItem(articleTableData);
     }
 
     if (articleTagRelationData.length > 0) {
@@ -390,11 +390,11 @@ const updateProjects = async (DBNotionId: string) => {
     }
 
     if (projectTableData.length > 0) {
-      supabaseRepos.insertItem('Project', projectTableData);
+      supabaseRepos.insertItem(projectTableData);
     }
 
     if (projectTechStackRelationData.length > 0) {
-      supabaseRepos.insertItem('ProjectTechStackRelations', projectTechStackRelationData);
+      supabaseRepos.insertItem(projectTechStackRelationData);
     }
     console.log('Projects updated successfully!');
   } catch (error) {

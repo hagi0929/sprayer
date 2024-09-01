@@ -1,6 +1,7 @@
 import { DBQueryDataModel, DBRetriveDataModel, NotionDBMetadata, PropertyColumn } from "../models/models.ts";
 
 export function parsePropertyData(rawPropertyData: any, name: string = ""): PropertyColumn[] {
+  console.log("rawPropertyData", rawPropertyData);
   switch (rawPropertyData.type) {
     case "multi_select":
       return (rawPropertyData.multi_select.options || rawPropertyData.multi_select).map((option: any) => {
@@ -11,14 +12,21 @@ export function parsePropertyData(rawPropertyData: any, name: string = ""): Prop
         } as PropertyColumn
       });
     case "select":
-
+      return [rawPropertyData.select && {
+        notionId: rawPropertyData.select.id,
+        label: rawPropertyData.select.name,
+        metadata: null,
+      }];
+    case "files":
+      console.log("rawPropertyData", rawPropertyData);
+      
       return [rawPropertyData.select && {
         notionId: rawPropertyData.select.id,
         label: rawPropertyData.select.name,
         metadata: null,
       }];
     default:
-      return [];
+      throw new Error(`Unsupported property type: ${rawPropertyData.type}`);
   }
 }
 
@@ -44,7 +52,7 @@ export function parseAttributeData(rawPropertyData: any, name: string = ""): any
         url: rawPropertyData.url || "",
       }];
     default:
-      return [];
+      throw new Error(`Unsupported property type: ${rawPropertyData.type}`);
   }
 }
 
@@ -60,10 +68,10 @@ export function parseRetrivedDBData(rawRetrivedDBData: any, DBMetadata: NotionDB
     if (propertyMap[property]) {
       const propertyName = propertyMap[property];
       const parsedPropertyData = parsePropertyData(rawRetrivedDBData.properties[property], property);
-      const i = parsedPropertyData.map((parsedData) => { return { ...parsedData, propertyName } });
+      const i = parsedPropertyData?.map((parsedData) => { return { ...parsedData, propertyName } });
+      if (!i) continue;
       if (resultPropertyMap[propertyName]) {
         resultPropertyMap[propertyName] = resultPropertyMap[propertyName].concat(i);
-
       } else {
         resultPropertyMap[propertyName] = i;
 

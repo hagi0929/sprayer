@@ -1,5 +1,5 @@
 import { SupabaseClient } from "jsr:@supabase/supabase-js@2";
-import { NotionDBColumn } from "../models/models.ts";
+import { ItemColumn, ItemPropertyRelationColumn, NotionDBColumn, NotionObjectColumn } from "../models/models.ts";
 import { ModuleContainer, TYPES } from "../utils/modules.ts"; // Assuming you have a TYPES file where symbols are defined
 
 export class DatabaseRepos {
@@ -38,14 +38,25 @@ export class DatabaseRepos {
     const { error: deleteError } = await this.moduleContainer.supabaseClient
       .from('NotionObject')
       .delete()
-      .in('id', notionObjectIdsToDelete);
+      .in('notionId', notionObjectIdsToDelete);
 
     if (deleteError) {
-      console.error('Error deleting outdated Notion objects:', deleteError);
+      console.error(`Error deleting all or some of Notion objects having id ${notionObjectIdsToDelete}:`, deleteError);
     }
   }
 
-  async insertNotionObjects(notionObjectsToInsert: any[]) {
+  async deleteNotionObjectsWithDatabaseId(notionDatabaseId: string) {
+    const { error: deleteError } = await this.moduleContainer.supabaseClient
+      .from('NotionObject')
+      .delete()
+      .eq('databaseId', notionDatabaseId);
+
+    if (deleteError) {
+      console.error(`Error deleting Notion objects associated with ${notionDatabaseId}:`, deleteError);
+    }
+  }
+
+  async insertNotionObjects(notionObjectsToInsert: NotionObjectColumn[]) {
     const { error: insertError } = await this.moduleContainer.supabaseClient
       .from('NotionObject')
       .insert(notionObjectsToInsert);
@@ -54,23 +65,33 @@ export class DatabaseRepos {
     }
   }
 
-  async insertItem(tableName: string, itemToInsert: any[]) {
+  async insertItem(itemToInsert: ItemColumn[]) {
     const { error: insertError } = await this.moduleContainer.supabaseClient
-      .from(tableName)
+      .from("Item")
       .insert(itemToInsert);
     if (insertError) {
       console.error('Error inserting new Item:', insertError);
     }
   }
 
-  async insertProperties(tableName: string, propertyToInsert: any) {
+  async insertProperties(propertyToInsert: any) {
     const { error: insertError } = await this.moduleContainer.supabaseClient
-      .from(tableName)
+      .from('Property')
       .insert(propertyToInsert);
     if (insertError) {
-      console.error(`Error inserting new ${tableName} items:`, insertError);
+      console.error(`Error inserting new Properties:`, insertError);
     }
   }
+
+  async insertItemPropertyRelations(propertyToInsert: ItemPropertyRelationColumn[]) {
+    const { error: insertError } = await this.moduleContainer.supabaseClient
+      .from('ItemPropertyRelation')
+      .insert(propertyToInsert);
+    if (insertError) {
+      console.error(`Error inserting ItemPropertyRelations: ${propertyToInsert}`, insertError);
+    }
+  }
+
 
   async updateProperties(tableName: string, propertiesToUpdate: any[]) {
     await Promise.all(
@@ -91,15 +112,6 @@ export class DatabaseRepos {
 
     if (deleteError) {
       console.error('Error deleting techstacks:', deleteError);
-    }
-  }
-
-  async insertItemPropertyRelations(tableName: string, itemToInsert: any) {
-    const { error: relationInsertError } = await this.moduleContainer.supabaseClient
-      .from(tableName)
-      .insert(itemToInsert);
-    if (relationInsertError) {
-      console.error('Error inserting into ArticleTagRelations table:', relationInsertError);
     }
   }
 }

@@ -1,4 +1,4 @@
-import { NotionDBColumn, DBOperations, ItemColumn, DBQueryDataModel, NotionObjectColumn } from "../models/models.ts";
+import { NotionDBColumn, DBOperations, ItemColumn, DBQueryDataModel, NotionObjectColumn, ParsedNotionAPIModel } from "../models/models.ts";
 import { ModuleContainer } from "../utils/modules.ts";
 
 export class ItemService {
@@ -13,7 +13,7 @@ export class ItemService {
 
   validateItems(
     currentItems: ItemColumn[],
-    incomingItemMap: Map<string, DBQueryDataModel>,
+    incomingItemMap: Map<string, ParsedNotionAPIModel>,
     currentLastUpdated: string | null
   ): DBOperations<string> {
     const operations: DBOperations<string> = {
@@ -34,7 +34,7 @@ export class ItemService {
         // Incoming item not found in current items, add it
         operations.add.push(itemId);
       } else {
-        if (!currentLastUpdated || new Date(currentLastUpdated) < new Date(incomingItem.lastUpdated)) {
+        if (!currentLastUpdated || new Date(currentLastUpdated) < new Date(incomingItem.lastUpdatedTime)) {
           // Incoming item found in current items, check if it needs an update
           operations.add.push(itemId);
           operations.delete.push(itemId);

@@ -1,0 +1,391 @@
+{
+    "object": "database",
+    "id": "fa7d1f60-6560-4c12-83c0-c96185198215",
+    "cover": null,
+    "icon": null,
+    "created_time": "2024-06-10T13:40:00.000Z",
+    "created_by": {
+        "object": "user",
+        "id": "176576c5-8046-4bfb-96fa-e2156335910a"
+    },
+    "last_edited_by": {
+        "object": "user",
+        "id": "176576c5-8046-4bfb-96fa-e2156335910a"
+    },
+    "last_edited_time": "2024-08-29T02:23:00.000Z",
+    "title": [
+        {
+            "type": "text",
+            "text": {
+                "content": "Projects",
+                "link": null
+            },
+            "annotations": {
+                "bold": false,
+                "italic": false,
+                "strikethrough": false,
+                "underline": false,
+                "code": false,
+                "color": "default"
+            },
+            "plain_text": "Projects",
+            "href": null
+        }
+    ],
+    "description": [],
+    "is_inline": true,
+    "properties": {
+        "Techstack": {
+            "id": "%3Fn%7Ds",
+            "name": "Techstack",
+            "type": "multi_select",
+            "multi_select": {
+                "options": [
+                    {
+                        "id": "04aff853-00cd-4ff1-9709-f38a3cf8669b",
+                        "name": "Oracle Cloud",
+                        "color": "pink",
+                        "description": null
+                    },
+                    {
+                        "id": "e52f3a84-069a-4997-b9bd-c9d4f32562d8",
+                        "name": "GraphQL",
+                        "color": "gray",
+                        "description": null
+                    },
+                    {
+                        "id": "3735e4b8-c570-4249-9f73-76e322e7bf03",
+                        "name": "Golang",
+                        "color": "default",
+                        "description": null
+                    },
+                    {
+                        "id": "9566885d-9189-4be5-9b3a-51ddc7d72430",
+                        "name": "Redis",
+                        "color": "green",
+                        "description": null
+                    },
+                    {
+                        "id": "99188fb5-26f8-462f-8b64-c058dd6cea6e",
+                        "name": "Flask",
+                        "color": "brown",
+                        "description": null
+                    },
+                    {
+                        "id": "d70c6eed-ab96-4e31-9f6d-6d2503674f15",
+                        "name": "Python",
+                        "color": "yellow",
+                        "description": null
+                    },
+                    {
+                        "id": "38a009b5-81fc-4059-a591-c61ede0ef1eb",
+                        "name": "gRPC",
+                        "color": "purple",
+                        "description": null
+                    },
+                    {
+                        "id": "037fd567-394c-4c87-a6d7-7cb962c4b359",
+                        "name": "Actix",
+                        "color": "red",
+                        "description": null
+                    },
+                    {
+                        "id": "a6da927c-2f21-47a1-90c4-bc0c7a576ad0",
+                        "name": "Rust",
+                        "color": "blue",
+                        "description": null
+                    },
+                    {
+                        "id": "0464534e-bc30-4b50-b3d9-aa273dbffade",
+                        "name": "Docker",
+                        "color": "blue",
+                        "description": null
+                    },
+                    {
+                        "id": "8e807884-631a-4d76-b4a8-0e5fec928ad5",
+                        "name": "Kubernetes",
+                        "color": "orange",
+                        "description": null
+                    },
+                    {
+                        "id": "a90eed6b-b81a-4ce6-9a0a-7876d4be8386",
+                        "name": "AWS",
+                        "color": "orange",
+                        "description": null
+                    },
+                    {
+                        "id": "69e6b896-689f-4cc7-bb77-21b8547f8093",
+                        "name": "C#",
+                        "color": "default",
+                        "description": null
+                    },
+                    {
+                        "id": "b85ad7cd-cae3-4759-9d4a-9c7d16a31d01",
+                        "name": ".NET",
+                        "color": "default",
+                        "description": null
+                    },
+                    {
+                        "id": "702cf83e-aa2e-4d61-b677-5e497428ceec",
+                        "name": "React",
+                        "color": "gray",
+                        "description": null
+                    },
+                    {
+                        "id": "f1023e6d-c1b3-48d3-84c7-aa64354f6ab9",
+                        "name": "Angular",
+                        "color": "orange",
+                        "description": null
+                    },
+                    {
+                        "id": "91c958ee-7609-49a0-8240-801f76b65060",
+                        "name": "SQL",
+                        "color": "brown",
+                        "description": null
+                    },
+                    {
+                        "id": "70f94abf-168a-498d-aea6-1f9810781ab7",
+                        "name": "PHP",
+                        "color": "pink",
+                        "description": null
+                    },
+                    {
+                        "id": "2fd5ea9c-220a-4662-a253-442f91dddbbf",
+                        "name": "Kafka",
+                        "color": "green",
+                        "description": null
+                    },
+                    {
+                        "id": "dd665d27-7dbf-447b-b8d4-18c312cf4256",
+                        "name": "Nest",
+                        "color": "blue",
+                        "description": null
+                    },
+                    {
+                        "id": "03e0ef95-c671-4a3b-8a5d-df9276969b17",
+                        "name": "Node.js",
+                        "color": "gray",
+                        "description": null
+                    },
+                    {
+                        "id": "0faf3c30-c9fb-4009-86b5-9f91d81198b0",
+                        "name": "Django",
+                        "color": "gray",
+                        "description": null
+                    },
+                    {
+                        "id": "bfd745a1-cf87-4949-bb46-e4d7a36c8f06",
+                        "name": "C++",
+                        "color": "gray",
+                        "description": null
+                    },
+                    {
+                        "id": "6276e5b1-b31f-42b3-ad12-669ca064af02",
+                        "name": "C",
+                        "color": "blue",
+                        "description": null
+                    },
+                    {
+                        "id": "7cc562ec-6633-4566-bbe3-3e5015bff02c",
+                        "name": "TypeScript",
+                        "color": "purple",
+                        "description": null
+                    },
+                    {
+                        "id": "f48e57f6-57e8-4d2c-ab2c-de3498a47e2e",
+                        "name": "JavaScript",
+                        "color": "orange",
+                        "description": null
+                    },
+                    {
+                        "id": "44a1bfc5-5dbf-40c9-8186-afd5204f80a7",
+                        "name": "Gin",
+                        "color": "brown",
+                        "description": null
+                    },
+                    {
+                        "id": "c04b83de-9d78-44fa-a3cd-58c851bd0029",
+                        "name": "Ruby",
+                        "color": "default",
+                        "description": null
+                    },
+                    {
+                        "id": "b3e0a42c-6be8-4aa0-84a2-70d6f9a1aa85",
+                        "name": "React Native",
+                        "color": "purple",
+                        "description": null
+                    },
+                    {
+                        "id": "eff0edf3-6120-491e-b9f6-812f13f76ebe",
+                        "name": "PostgreSQL",
+                        "color": "green",
+                        "description": null
+                    },
+                    {
+                        "id": "8a06d76c-12b9-4e36-955a-c737ff9978c5",
+                        "name": "GeoJson",
+                        "color": "green",
+                        "description": null
+                    },
+                    {
+                        "id": "c03790b1-14c0-4306-8e3a-96fd516b87a6",
+                        "name": "bash",
+                        "color": "blue",
+                        "description": null
+                    },
+                    {
+                        "id": "72e47781-f806-4c3a-9072-f831847e97b0",
+                        "name": "Assembly",
+                        "color": "gray",
+                        "description": null
+                    },
+                    {
+                        "id": "a996540b-867b-4370-9863-d7ae0006e3d5",
+                        "name": "Fast API",
+                        "color": "pink",
+                        "description": null
+                    },
+                    {
+                        "id": "2d74893f-64f0-4e7f-ba9a-3b62045c908c",
+                        "name": "Notion API",
+                        "color": "gray",
+                        "description": null
+                    },
+                    {
+                        "id": "2252973e-5f4d-48bd-9aff-65b0c57c4f58",
+                        "name": "Linux",
+                        "color": "red",
+                        "description": null
+                    },
+                    {
+                        "id": "e4014ca6-c263-442e-8848-f31c2e53456e",
+                        "name": "HTML",
+                        "color": "blue",
+                        "description": null
+                    },
+                    {
+                        "id": "a1128bb7-cfe4-441f-adb4-9a62367f4a72",
+                        "name": "Web Sockets",
+                        "color": "gray",
+                        "description": null
+                    },
+                    {
+                        "id": "730d60e2-8388-48c4-91fc-352af31f5917",
+                        "name": "OpenCV",
+                        "color": "gray",
+                        "description": null
+                    },
+                    {
+                        "id": "007cf5c9-c6ef-47a0-9041-30813ebb878d",
+                        "name": "CSS",
+                        "color": "orange",
+                        "description": null
+                    },
+                    {
+                        "id": "3f5c9b3b-ed39-4c75-b6a0-68e25bfce2b7",
+                        "name": "GitHub Action",
+                        "color": "blue",
+                        "description": null
+                    },
+                    {
+                        "id": "84da48fb-6cb7-4503-812e-64a139f2402d",
+                        "name": "Jenkins",
+                        "color": "brown",
+                        "description": null
+                    },
+                    {
+                        "id": "9413de90-9e32-4d58-9264-9b6dad4da29d",
+                        "name": "Scss",
+                        "color": "orange",
+                        "description": null
+                    },
+                    {
+                        "id": "2c535b9b-1163-48d4-88b9-5a282fdd1d6c",
+                        "name": "MySQL",
+                        "color": "yellow",
+                        "description": null
+                    },
+                    {
+                        "id": "1094e04e-dd24-4dc1-85c3-241f8903eba5",
+                        "name": "Figma",
+                        "color": "green",
+                        "description": null
+                    }
+                ]
+            }
+        },
+        "Description": {
+            "id": "%5Bgia",
+            "name": "Description",
+            "type": "rich_text",
+            "rich_text": {}
+        },
+        "Website": {
+            "id": "%60NC%3E",
+            "name": "Website",
+            "type": "url",
+            "url": {}
+        },
+        "Category": {
+            "id": "bJ%40M",
+            "name": "Category",
+            "type": "multi_select",
+            "multi_select": {
+                "options": [
+                    {
+                        "id": "eba509b4-47d1-4b00-b80d-cfd9bf5fb80e",
+                        "name": "frontend",
+                        "color": "orange",
+                        "description": null
+                    },
+                    {
+                        "id": "faaba374-ef41-493a-97d7-df706053c8f1",
+                        "name": "backend",
+                        "color": "pink",
+                        "description": null
+                    },
+                    {
+                        "id": "36740513-afe7-4300-81dc-47185addc3ca",
+                        "name": "fullstack",
+                        "color": "blue",
+                        "description": null
+                    }
+                ]
+            }
+        },
+        "Github": {
+            "id": "fY%60%3F",
+            "name": "Github",
+            "type": "url",
+            "url": {}
+        },
+        "Thumbnail": {
+            "id": "wuip",
+            "name": "Thumbnail",
+            "type": "files",
+            "files": {}
+        },
+        "isPrimary": {
+            "id": "%7CpKX",
+            "name": "isPrimary",
+            "type": "checkbox",
+            "checkbox": {}
+        },
+        "title": {
+            "id": "title",
+            "name": "title",
+            "type": "title",
+            "title": {}
+        }
+    },
+    "parent": {
+        "type": "page_id",
+        "page_id": "6ba1c404-eaae-46d9-a8fd-14f0bd38fb77"
+    },
+    "url": "https://www.notion.so/fa7d1f6065604c1283c0c96185198215",
+    "public_url": null,
+    "archived": false,
+    "in_trash": false,
+    "developer_survey": "https://notionup.typeform.com/to/bllBsoI4?utm_source=postman",
+    "request_id": "38cadc59-e669-483a-8859-81badf66de28"
+}

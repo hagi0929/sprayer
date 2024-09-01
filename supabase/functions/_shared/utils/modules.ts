@@ -23,7 +23,6 @@ export class ModuleContainer {
   propertyService: PropertyService;
 
   constructor() {
-    console.log(Deno.env.get("SSUPABASE_URL"));
     const client = new Client({
       auth: Deno.env.get("NOTION_API_KEY"),
     });

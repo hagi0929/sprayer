@@ -19,7 +19,6 @@ import { NotionClient, ModuleContainer } from "../_shared/utils/modules.ts";
 const moduleChain = new ModuleContainer();
 
 Deno.serve(async (req) => {
-  const { name } = await req.json()
 
   const notionDBs = await moduleChain.databaseRepos.getNotionDBs();
 

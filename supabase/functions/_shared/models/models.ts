@@ -25,6 +25,7 @@ export interface DBRetriveDataModel {
   lastUpdated: string;
   properties: Record<string, PropertyColumn[]>;
 }
+
 export interface DBQueryDataModel {
   id: string;
   label: string;
@@ -59,3 +60,20 @@ export type ItemPropertyRelationColumn = {
   propertyId: string;
 }
 
+export interface ParsedNotionAPIPropertyModel {
+  type: string;
+  body: any;
+}
+
+export type ParsedNotionAPIModel = {
+  id: string;
+  title: string;
+  createdTime: string;
+  lastUpdatedTime: string;
+  properties: Map<string, ParsedNotionAPIPropertyModel>;
+}
+
+export type UrlModel = {
+  type: string;
+  url: string;
+}

@@ -1,7 +1,6 @@
-import { DBQueryDataModel, DBRetriveDataModel, NotionDBMetadata, PropertyColumn } from "../models/models.ts";
+import { DBQueryDataModel, DBRetriveDataModel, NotionDBMetadata, ParsedNotionAPIModel, ParsedNotionAPIPropertyModel, PropertyColumn } from "../models/models.ts";
 
 export function parsePropertyData(rawPropertyData: any, name: string = ""): PropertyColumn[] | null {
-  console.log("rawPropertyData", rawPropertyData);
   switch (rawPropertyData.type) {
     case "multi_select":
       return rawPropertyData.multi_select.map((option: any) => {
@@ -22,7 +21,7 @@ export function parsePropertyData(rawPropertyData: any, name: string = ""): Prop
         return null;
       }
     case "files":
-      console.log("files Here", rawPropertyData);
+      console.error("files Here", rawPropertyData);
 
     default:
       console.error(`Unsupported property type 1: ${rawPropertyData.type}`);
@@ -101,7 +100,7 @@ export function parseRetrivedDBData(rawRetrivedDBData: any, DBMetadata: NotionDB
           break;
 
         case "files":
-          console.log("rawPropertyData (files):", rawPropertyData);
+          console.error("rawPropertyData (files):", rawPropertyData);
           // Add logic for handling files if necessary
           break;
 
@@ -117,10 +116,10 @@ export function parseRetrivedDBData(rawRetrivedDBData: any, DBMetadata: NotionDB
           resultPropertyMap[propertyName] = parsedPropertyData;
         }
       } else {
-        console.log(`Skipping empty or undefined property: ${propertyName}`);
+        console.error(`Skipping empty or undefined property: ${propertyName}`);
       }
     } else {
-      console.log(`Property ${property} has no valid data or is unsupported.`);
+      console.error(`Property ${property} has no valid data or is unsupported.`);
     }
   }
 
@@ -145,7 +144,7 @@ export function parseQueryDBData(rawQueryDBDatas: any, DBMetadata: NotionDBMetad
     for (const property in rawQuerydDBData.properties) {
       const rawPropertyData = rawQuerydDBData.properties[property];
       let parsedPropertyData: PropertyColumn[] | undefined = undefined;
-      
+
       if (propertyMap[property]) {
         const propertyName = propertyMap[property];
 
@@ -183,6 +182,102 @@ export function parseQueryDBData(rawQueryDBDatas: any, DBMetadata: NotionDBMetad
   })
 }
 
-export function parseNotionData() {
-  
+export function parseNotionPropertyData(rawPropertyData: any, isRetriveData: boolean): ParsedNotionAPIPropertyModel | null {
+  const type = rawPropertyData.type;
+  if (!type) {
+    console.error("Property type not found");
+    return null;
+  }
+  const parsedProperty = { type: type } as ParsedNotionAPIPropertyModel;
+  switch (type) {
+    case "title": {
+      parsedProperty.body = rawPropertyData.title
+        .map((text: any) => text.plain_text)
+        .join(" ");
+      break;
+    }
+    case "multi_select": {
+      const rawData = isRetriveData ? rawPropertyData.multi_select.options : rawPropertyData.multi_select;
+      parsedProperty.body = rawData.map((option: any) => {
+        return { ...option };
+      });
+      break;
+    }
+    case "select": {
+      console.log("rawPropertyData.select", rawPropertyData.select);
+      if (!rawPropertyData.select) {
+        parsedProperty.body = [];
+        break;
+      }
+      const rawData = isRetriveData ? rawPropertyData.select.options : [rawPropertyData.select];
+      console.log("isRetriveData", isRetriveData);
+
+      console.log("rawData", rawData);
+
+      parsedProperty.body = rawData.map((option: any) => {
+        return { ...option };
+      });
+      break;
+    }
+    case "rich_text": {
+      if (isRetriveData) {
+        return null;
+      }
+      parsedProperty.body = rawPropertyData.rich_text.map((text: any) => text.plain_text).join(" ");
+      break;
+    }
+    case "url": {
+      parsedProperty.body = {
+        url: rawPropertyData.url || "",
+      };
+      break;
+    } case "files": {
+      if (isRetriveData) {
+        return null;
+      }
+      // TODO - Add logic for handling files if necessary
+      parsedProperty.body = rawPropertyData.files;
+      break;
+    }
+    case "checkbox": {
+      parsedProperty.body = rawPropertyData.checkbox;
+      break;
+    } default: {
+      console.error(`Unsupported property type 1: ${rawPropertyData.type}`);
+      return null;
+    }
+  }
+  return parsedProperty;
+}
+
+export function parseNotionData(rawNotionData: any): ParsedNotionAPIModel {
+  const isRetriveData = rawNotionData.object === "database";
+
+  const notionId = rawNotionData.id;
+
+  const titleMap = isRetriveData ? rawNotionData.title : rawNotionData.properties.title.title;
+  const title = titleMap.map((text: any) => text.plain_text).join(" ");
+
+  const lastUpdatedTime = rawNotionData.last_edited_time;
+  const createdTime = rawNotionData.created_time;
+
+  const properties: Map<string, any> = new Map();
+
+  for (const property in rawNotionData.properties) {
+    if (property == "title") {
+      continue;
+    }
+    const rawPropertyData = rawNotionData.properties[property];
+    const parsedPropertyData = parseNotionPropertyData(rawPropertyData, isRetriveData);
+    if (parsedPropertyData === null) continue;
+    properties.set(property, parsedPropertyData);
+  }
+
+  return {
+    id: notionId,
+    title: title,
+    createdTime: createdTime,
+    lastUpdatedTime: lastUpdatedTime,
+    properties: properties,
+  };
 }

@@ -11,24 +11,25 @@ export interface NotionDBMetadata {
 
 export interface NotionDBColumn {
   databaseId: string;
-  lastUpdated: Date;
+  lastUpdated: string;
   metadata: NotionDBMetadata;
 }
 
-export interface NotionObjectColumn {
+export type NotionObjectColumn = {
   notionId: string;
-  notionType: NotionObjectType;
+  objectType: NotionObjectType;
   databaseId: string;
 }
 
 export interface DBRetriveDataModel {
-  lastUpdated: Date;
+  lastUpdated: string;
   properties: Record<string, PropertyColumn[]>;
 }
 export interface DBQueryDataModel {
   id: string;
-  lastUpdated: Date;
-  created: Date;
+  label: string;
+  lastUpdated: string;
+  created: string;
   properties: Record<string, PropertyColumn[]>;
   attributes: Record<string, any>;
 }
@@ -43,18 +44,18 @@ export interface ItemColumn {
   notionId: string;
   label: string;
   itemName: string;
-  metadata: JSON | null;
+  metadata: any | null;
 }
 
 export type PropertyColumn = {
   notionId: string;
   label: string;
   propertyName?: string;
-  metadata: JSON | null;
+  metadata: any | null;
 }
 
 export type ItemPropertyRelationColumn = {
   itemId: string;
   propertyId: string;
-} 
+}
 

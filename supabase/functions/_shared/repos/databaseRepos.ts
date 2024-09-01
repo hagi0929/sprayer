@@ -1,20 +1,18 @@
-import { injectable, inject } from "npm:inversify";
-import { Client as NotionClient } from "npm:@notionhq/client";
 import { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { NotionDBColumn } from "../models/models.ts";
+import { ModuleContainer, TYPES } from "../utils/modules.ts"; // Assuming you have a TYPES file where symbols are defined
 
-@injectable()
 export class DatabaseRepos {
-  private supabaseClient: SupabaseClient;
+  private moduleContainer: ModuleContainer;
 
   constructor(
-    @inject("SupabaseClient") supabaseClient: SupabaseClient
+    moduleContainer: ModuleContainer
   ) {
-    this.supabaseClient = supabaseClient;
+    this.moduleContainer = moduleContainer;
   }
 
   async getNotionDBs(): Promise<NotionDBColumn[]> {
-    const { data: notionDBs, error: fetchError } = await this.supabaseClient
+    const { data: notionDBs, error: fetchError } = await this.moduleContainer.supabaseClient
       .from('NotionDB')
       .select('*');
 
@@ -25,7 +23,7 @@ export class DatabaseRepos {
   }
 
   async getNotionObjectsWithDBId(dbId: string) {
-    const { data: supabaseArticleData, error: fetchError } = await this.supabaseClient
+    const { data: supabaseArticleData, error: fetchError } = await this.moduleContainer.supabaseClient
       .from('NotionObject')
       .select('*')
       .eq('database', dbId);
@@ -37,7 +35,7 @@ export class DatabaseRepos {
   }
 
   async deleteNotionObjectsWithObjectIds(notionObjectIdsToDelete: string[]) {
-    const { error: deleteError } = await this.supabaseClient
+    const { error: deleteError } = await this.moduleContainer.supabaseClient
       .from('NotionObject')
       .delete()
       .in('id', notionObjectIdsToDelete);
@@ -48,7 +46,7 @@ export class DatabaseRepos {
   }
 
   async insertNotionObjects(notionObjectsToInsert: any[]) {
-    const { error: insertError } = await this.supabaseClient
+    const { error: insertError } = await this.moduleContainer.supabaseClient
       .from('NotionObject')
       .insert(notionObjectsToInsert);
     if (insertError) {
@@ -57,16 +55,16 @@ export class DatabaseRepos {
   }
 
   async insertItem(tableName: string, itemToInsert: any[]) {
-    const { error: insertError } = await this.supabaseClient
+    const { error: insertError } = await this.moduleContainer.supabaseClient
       .from(tableName)
       .insert(itemToInsert);
     if (insertError) {
-      console.error('Error inserting new Notion objects:', insertError);
+      console.error('Error inserting new Item:', insertError);
     }
   }
 
   async insertProperties(tableName: string, propertyToInsert: any) {
-    const { error: insertError } = await this.supabaseClient
+    const { error: insertError } = await this.moduleContainer.supabaseClient
       .from(tableName)
       .insert(propertyToInsert);
     if (insertError) {
@@ -77,7 +75,7 @@ export class DatabaseRepos {
   async updateProperties(tableName: string, propertiesToUpdate: any[]) {
     await Promise.all(
       propertiesToUpdate.map((techstack) =>
-        this.supabaseClient
+        this.moduleContainer.supabaseClient
           .from(tableName)
           .update({ label: techstack.label })
           .eq('id', techstack.id)
@@ -86,10 +84,10 @@ export class DatabaseRepos {
   }
 
   async deleteProperties(tableName: string, propertyIdsToDelete: string[]) {
-    const { error: deleteError } = await this.supabaseClient
+    const { error: deleteError } = await this.moduleContainer.supabaseClient
       .from(tableName)
       .delete()
-      .in('id', propertyIdsToDelete);
+      .in('notionId', propertyIdsToDelete);
 
     if (deleteError) {
       console.error('Error deleting techstacks:', deleteError);
@@ -97,7 +95,7 @@ export class DatabaseRepos {
   }
 
   async insertItemPropertyRelations(tableName: string, itemToInsert: any) {
-    const { error: relationInsertError } = await this.supabaseClient
+    const { error: relationInsertError } = await this.moduleContainer.supabaseClient
       .from(tableName)
       .insert(itemToInsert);
     if (relationInsertError) {

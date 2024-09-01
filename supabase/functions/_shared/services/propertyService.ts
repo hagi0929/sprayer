@@ -1,14 +1,18 @@
 import { PropertyColumn, DBOperations } from "../models/models.ts";
-import { DependencyContainer, ModuleChain } from "../utils/modules.ts";
+import { ModuleContainer } from "../utils/modules.ts";
 
 export class PropertyService {
-  moduleChain: DependencyContainer;
-  constructor(moduleChain: DependencyContainer) {
-    this.moduleChain = moduleChain;
+  private moduleContainer: ModuleContainer;
+
+  constructor(
+
+    moduleContainer: ModuleContainer
+  ) {
+    this.moduleContainer = moduleContainer; // Access the client from the NotionClient object
   }
 
   updateProperties(
-    currentProperties: Record<string, PropertyColumn[]>,
+    currentProperties: PropertyColumn[],
     incomingProperties: Record<string, PropertyColumn[]>
   ): DBOperations<PropertyColumn> {
     const operations: DBOperations<PropertyColumn> = {
@@ -19,10 +23,8 @@ export class PropertyService {
 
     // Create a map for quick lookup of current properties by notionId
     const currentPropertyMap = new Map<string, PropertyColumn>();
-    for (const [propertyName, propertyColumns] of Object.entries(currentProperties)) {
-      for (const propertyColumn of propertyColumns) {
-        currentPropertyMap.set(propertyColumn.notionId, propertyColumn);
-      }
+    for (const property of currentProperties) {
+      currentPropertyMap.set(property.notionId, property);
     }
 
     // Process incoming properties

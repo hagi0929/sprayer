@@ -84,7 +84,8 @@ export function parseQueryDBData(rawRetrivedDBDatas: any, DBMetadata: NotionDBMe
     const attributeMap = DBMetadata.attributeMap
     const resultPropertyMap: Record<string, PropertyColumn[]> = {};
     const resultAttributeMap: Record<string, any> = {};
-
+    // console.log("rawRetrivedDBData", rawRetrivedDBData);
+    const title = parseAttributeData(rawRetrivedDBData.properties.title)[0] || "untitled";
     for (const property in rawRetrivedDBData.properties) {
       // console.log("propertyMap", propertyMap);
       // console.log("attributeMap", attributeMap);
@@ -114,6 +115,7 @@ export function parseQueryDBData(rawRetrivedDBDatas: any, DBMetadata: NotionDBMe
     }
     return {
       id: rawRetrivedDBData.id,
+      label: title,
       lastUpdated: rawRetrivedDBData.last_edited_time,
       created: rawRetrivedDBData.created_time,
       attributes: resultAttributeMap,

@@ -114,4 +114,15 @@ export class DatabaseRepos {
       console.error('Error deleting techstacks:', deleteError);
     }
   }
+
+  async updateNotionDBWithLastUpdatedTime(dbId: string, lastUpdated: Date) {
+    const { error: updateError } = await this.moduleContainer.supabaseClient
+      .from('NotionDB')
+      .update({ lastUpdated })
+      .eq('databaseId', dbId);
+
+    if (updateError) {
+      console.error(`Error updating NotionDB with id ${dbId}:`, updateError);
+    }
+  }
 }

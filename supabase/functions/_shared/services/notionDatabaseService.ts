@@ -124,7 +124,7 @@ export class NotionDatabaseService {
     const DBMetadata: NotionDBMetadata = notionDB.metadata;
     const tableName = notionDB.metadata.tableName;
     const lastUpdated = notionDB.lastUpdated;
-
+    const currentTime = new Date()
     const rawRetrivedData = await this.moduleContainer.notionRepos.retrieveDatabase(databaseId);
     const parsedRetrivedData = parseNotionData(rawRetrivedData);
     const { properties: retrivedPropertyData } = await this.groupPropertyData(parsedRetrivedData.properties, DBMetadata, false);
@@ -257,5 +257,7 @@ export class NotionDatabaseService {
       await this.moduleContainer.databaseRepos.insertItem(itemsToInsert);
       await this.moduleContainer.databaseRepos.insertItemPropertyRelations(propertyItemRelationsToInsert);
     }
+    this.moduleContainer.databaseRepos.updateNotionDBWithLastUpdatedTime(databaseId, currentTime);
+
   }
 }

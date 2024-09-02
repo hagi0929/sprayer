@@ -34,15 +34,27 @@ export class NotionDatabaseService {
           } as PropertyColumn;
         })
       case 'files':
-        console.error("files is not property");
-        return null;
+        console.log("file data", DBPropertyData.body);
+
+        // return DBPropertyData.body.map((option) => {
+        //   return {
+        //     notionId: option.id,
+        //     label: option.name,
+        //     propertyName: newPropertyName,
+        //     metadata: this.moduleContainer.storageService.uploadFile(option.url),
+        //   } as PropertyColumn;
+        // });
       default:
         console.error(`Unsupported property type 1: ${DBPropertyData.type}`);
         return null;
     }
   }
-  processFile(fileObject: any): string {
-    return fileObject.file.url;
+  async processFile(fileObject: any): Promise<string> {
+    console.log("fileObject", fileObject);
+    console.log("fileObject.file.url", fileObject.file);
+    
+    const newURL = await this.moduleContainer.storageService.uploadFile(fileObject.file.url);
+    return newURL;
   }
 
   convertToAttributeObject(DBPropertyData: ParsedNotionAPIPropertyModel, oldName: string): UrlModel | string[] | string | null {
@@ -58,8 +70,9 @@ export class NotionDatabaseService {
           return option.name;
         });
       case 'files':
-        return DBPropertyData.body.map((option) => {
-          return this.processFile(option);
+        
+        return DBPropertyData.body.map(async (option) => {
+          return await this.processFile(option);
         });
       case 'url':
         return { type: oldName, url: DBPropertyData.body.url } as UrlModel;
@@ -184,8 +197,6 @@ export class NotionDatabaseService {
         return [item.id, { properties, attributes }];
       })
     );
-    console.log("incomingItemMap", incomingItemMap);
-    console.log("incomingPropertyAtributeMap", incomingPropertyAtributeMap);
 
     if (itemOperations.delete.length > 0) {
       await this.moduleContainer.databaseRepos.deleteNotionObjectsWithObjectIds(itemOperations.delete);
@@ -208,13 +219,11 @@ export class NotionDatabaseService {
         }
         // flatten record and get only all the notion ids
         Object.keys(item.properties).forEach((propertyId) => {
-          console.log("item.properties[propertyId]", item.properties[propertyId]);
 
           return item.properties[propertyId].forEach((property) =>
             propertyItemRelationsToInsert.push({ itemId, propertyId: property.notionId } as ItemPropertyRelationColumn));
         });
-        console.log("propertyItemRelationsToInsert", propertyItemRelationsToInsert);
-        
+
       });
       const itemsToInsert: ItemColumn[] = itemOperations.add.map((itemId) => {
         const item = incomingItemMap.get(itemId);

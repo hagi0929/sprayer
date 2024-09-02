@@ -60,7 +60,7 @@ export type ItemPropertyRelationColumn = {
   propertyId: string;
 }
 
-export interface ParsedNotionAPIPropertyModel {
+export type ParsedNotionAPIPropertyModel = {
   type: string;
   body: any;
 }

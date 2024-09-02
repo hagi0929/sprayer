@@ -6,6 +6,7 @@ import { NotionDatabaseService } from "../services/notionDatabaseService.ts";
 import { PropertyService } from "../services/propertyService.ts";
 import { NotionRenderer } from "npm:@notion-render/client";
 import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2";
+import { StorageService } from "../services/storageService.ts";
 
 
 export type NotionClient = {
@@ -21,6 +22,7 @@ export class ModuleContainer {
   itemService: ItemService;
   notionDatabaseService: NotionDatabaseService;
   propertyService: PropertyService;
+  storageService: StorageService;
 
   constructor() {
     const client = new Client({
@@ -34,11 +36,11 @@ export class ModuleContainer {
       Deno.env.get("SSUPABASE_URL")!,
       Deno.env.get("SSUPABASE_SERVICE_ROLE_KEY")!,
     );
-    
     this.databaseRepos = new DatabaseRepos(this);
     this.notionRepos = new NotionRepos(this);
     this.itemService = new ItemService(this);
     this.notionDatabaseService = new NotionDatabaseService(this);
     this.propertyService = new PropertyService(this);
+    this.storageService = new StorageService(this);
   }
 }

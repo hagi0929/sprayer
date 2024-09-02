@@ -1,4 +1,4 @@
-import { DBQueryDataModel, ItemColumn, ItemPropertyRelationColumn, NotionDBColumn, NotionDBMetadata, NotionObjectColumn, ParsedNotionAPIModel, ParsedNotionAPIPropertyModel, PropertyColumn, UrlModel } from '../models/models.ts';
+import { DBQueryDataModel, FileModel, ItemColumn, ItemPropertyRelationColumn, NotionDBColumn, NotionDBMetadata, NotionObjectColumn, NotionPropertyType, ParsedNotionAPIModel, ParsedNotionAPIPropertyModel, PropertyColumn, UrlModel } from '../models/models.ts';
 import { NotionRepos } from '../repos/notionRepos.ts';
 import { DatabaseRepos } from '../repos/databaseRepos.ts';
 import { ItemService } from '../services/itemService.ts';
@@ -27,6 +27,7 @@ export class NotionDatabaseService {
       case 'select':
         return DBPropertyData.body.map((option) => {
           return {
+            propertyType: NotionPropertyType.SELECT,
             notionId: option.id,
             label: option.name,
             propertyName: newPropertyName,
@@ -34,30 +35,25 @@ export class NotionDatabaseService {
           } as PropertyColumn;
         })
       case 'files':
-        console.log("file data", DBPropertyData.body);
-
-        // return DBPropertyData.body.map((option) => {
-        //   return {
-        //     notionId: option.id,
-        //     label: option.name,
-        //     propertyName: newPropertyName,
-        //     metadata: this.moduleContainer.storageService.uploadFile(option.url),
-        //   } as PropertyColumn;
-        // });
+        return DBPropertyData.body.map((option) => {
+          return {
+            notionId: option.file.id,
+            label: option.file.name,
+            propertyName: newPropertyName,
+            propertyType: NotionPropertyType.FILE,
+            metadata: {
+              file: this.moduleContainer.storageService.uploadPublicFile(option.file.url),
+            },
+          } as PropertyColumn;
+        });
+        break;
       default:
         console.error(`Unsupported property type 1: ${DBPropertyData.type}`);
         return null;
     }
   }
-  async processFile(fileObject: any): Promise<string> {
-    console.log("fileObject", fileObject);
-    console.log("fileObject.file.url", fileObject.file);
-    
-    const newURL = await this.moduleContainer.storageService.uploadFile(fileObject.file.url);
-    return newURL;
-  }
 
-  convertToAttributeObject(DBPropertyData: ParsedNotionAPIPropertyModel, oldName: string): UrlModel | string[] | string | null {
+  convertToAttributeObject(DBPropertyData: ParsedNotionAPIPropertyModel, oldName: string): UrlModel | FileModel | string[] | string | null {
     switch (DBPropertyData.type) {
       case 'title':
         console.error("title is not atribute");
@@ -70,9 +66,8 @@ export class NotionDatabaseService {
           return option.name;
         });
       case 'files':
-        
         return DBPropertyData.body.map(async (option) => {
-          return await this.processFile(option);
+          return this.moduleContainer.storageService.uploadPublicFile(option.file.url);
         });
       case 'url':
         return { type: oldName, url: DBPropertyData.body.url } as UrlModel;
@@ -119,7 +114,10 @@ export class NotionDatabaseService {
         }
       }
     }
-    return { properties: groupedPropertyData, attributes: groupedAttributeData };
+    return {
+      properties: groupedPropertyData,
+      attributes: groupedAttributeData
+    };
   }
 
   async updateNotionDBs(notionDB: NotionDBColumn) {
@@ -191,12 +189,6 @@ export class NotionDatabaseService {
     const itemOperations = this.moduleContainer.itemService.validateItems(currentItems, incomingItemMap, lastUpdated);
 
 
-    const incomingPropertyAtributeMap = new Map<string, { properties: Record<string, PropertyColumn[]>, attributes: Record<String, any> }>(
-      parsedNotionQueryData.map((item) => {
-        const { properties, attributes } = this.groupPropertyData(item.properties, DBMetadata);
-        return [item.id, { properties, attributes }];
-      })
-    );
 
     if (itemOperations.delete.length > 0) {
       await this.moduleContainer.databaseRepos.deleteNotionObjectsWithObjectIds(itemOperations.delete);
@@ -210,6 +202,19 @@ export class NotionDatabaseService {
           databaseId,
         } as NotionObjectColumn;
       });
+      // TODO: iam fucking drunked rn check if this is okay
+      const incomingPropertyAtributeMap = new Map<string, { properties: Record<string, PropertyColumn[]>, attributes: Record<string, any> }>(
+        itemOperations.add.map((item) => {
+          const itemObj = incomingItemMap.get(item);
+          if (!itemObj) {
+            console.error(`Failed to find item with ID ${item}`);
+            throw new Error(`Failed to find item with ID ${item}`);
+          }
+          const { properties, attributes } = this.groupPropertyData(itemObj.properties, DBMetadata);
+          return [item, { properties, attributes }];
+        })
+      );
+
       const propertyItemRelationsToInsert: ItemPropertyRelationColumn[] = []
       itemOperations.add.forEach((itemId) => {
         const item = incomingPropertyAtributeMap.get(itemId);
@@ -247,19 +252,4 @@ export class NotionDatabaseService {
       await this.moduleContainer.databaseRepos.insertItemPropertyRelations(propertyItemRelationsToInsert);
     }
   }
-
-  // If you want to retrieve page content as well
-  // async getPageContentForItems(notionQueryDBData: DBQueryDataModel[]) {
-  //   for (const item of notionQueryDBData) {
-  //     try {
-  //       const pageContent = await this.notionRepos.getChildBlocks(item.id);
-  //       item.attributes = {
-  //         ...item.attributes,
-  //         pageContent: pageContent.results,
-  //       };
-  //     } catch (error) {
-  //       console.error(`Failed to get page content for item ID ${item.id}:`, error);
-  //     }
-  //   }
-  // }
 }

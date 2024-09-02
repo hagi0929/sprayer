@@ -10,19 +10,14 @@ export class StorageService {
     this.moduleContainer = moduleContainer;
   }
 
-  async uploadFile(url: string, type: string = "img"): Promise<string> {
-
+  async uploadPublicFile(url: string): Promise<string> {
     const blob = await fetch(url).then((r) => r.blob())
-    const newFileName = `${crypto.randomUUID()}.${type}`
-    await this.moduleContainer.supabaseClient.storage.from('image').upload("example.jpg", blob)
-    const temp = this.moduleContainer.supabaseClient.storage.from('image').getPublicUrl("example.jpg")
+    const newFileName = `${crypto.randomUUID()}`
+    await this.moduleContainer.supabaseClient.storage.from('publicFile').upload(newFileName, blob)
+    const temp = this.moduleContainer.supabaseClient.storage.from('publicFile').getPublicUrl(newFileName)
     if (!temp.data) {
       throw new Error("Error uploading file");
     }
-    console.log("temp.data.publicUrl", temp.data.publicUrl);
-    console.log("blob", temp.data.publicUrl);
-    
-    
     return temp.data.publicUrl;
   }
 }

@@ -3,6 +3,14 @@ enum NotionObjectType {
   ITEM = 'item',
 }
 
+export enum NotionPropertyType {
+  TITLE = 'title',
+  SELECT = 'select',
+  TEXT = 'text',
+  URL = 'url',
+  FILE = 'file',
+  BOOLEAN = 'boolean',
+}
 export interface NotionDBMetadata {
   tableName: string;
   propertyMap: Record<string, string>;
@@ -51,7 +59,8 @@ export interface ItemColumn {
 export type PropertyColumn = {
   notionId: string;
   label: string;
-  propertyName?: string;
+  propertyType: string;
+  propertyName: string;
   metadata: any | null;
 }
 
@@ -76,4 +85,8 @@ export type ParsedNotionAPIModel = {
 export type UrlModel = {
   type: string;
   url: string;
+}
+
+export type FileModel = {
+  files: any[];
 }

@@ -22,10 +22,8 @@ Deno.serve(async (req) => {
 
   const notionDBs = await moduleChain.databaseRepos.getNotionDBs();
 
-  // console.log(notionDBs);
 
   for (const notionDB of notionDBs) {
-    // console.log(notionDB);
     await moduleChain.notionDatabaseService.updateNotionDBs(notionDB);
   }
   return new Response(

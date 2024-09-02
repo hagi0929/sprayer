@@ -1,6 +1,6 @@
 import { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { ItemColumn, ItemPropertyRelationColumn, NotionDBColumn, NotionObjectColumn } from "../models/models.ts";
-import { ModuleContainer, TYPES } from "../utils/modules.ts"; // Assuming you have a TYPES file where symbols are defined
+import { ModuleContainer } from "../utils/modules.ts"; // Assuming you have a TYPES file where symbols are defined
 
 export class DatabaseRepos {
   private moduleContainer: ModuleContainer;

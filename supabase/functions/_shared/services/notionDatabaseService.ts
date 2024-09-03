@@ -134,7 +134,7 @@ export class NotionDatabaseService {
 
     const DBPropertyData = parsedRetrivedData.properties;
 
-    const { data: currentProperties, error } = await this.moduleContainer.supabaseClient.from("fullPropertyTable").select(
+    const { data: currentProperties, error } = await this.moduleContainer.supabaseClient.from("FullPropertyTable").select(
       `notionId, propertyName,metadata, label`
     ).eq('databaseId', databaseId);
     if (error) {
@@ -175,8 +175,8 @@ export class NotionDatabaseService {
     const rawNotionQueryData = await this.moduleContainer.notionRepos.queryDatabase(databaseId);
     const parsedNotionQueryData = rawNotionQueryData.results.map((d) => parseNotionData(d));
 
-    const { data: currentItems, error: dd } = await this.moduleContainer.supabaseClient.from("fullItemTable").select(
-      `notionId, itemName, metadata, label`
+    const { data: currentItems, error: dd } = await this.moduleContainer.supabaseClient.from("FullItemTable").select(
+      `notionId, itemName, metadata, label, createdTime`
     ).eq('databaseId', databaseId);
     if (dd) {
       console.error('Error fetching properties:', error);
@@ -250,6 +250,7 @@ export class NotionDatabaseService {
           label: item.title,
           itemName: DBMetadata.tableName,
           metadata: attributes,
+          createdTime: item.createdTime,
         } as ItemColumn;
       });
 
@@ -258,6 +259,5 @@ export class NotionDatabaseService {
       await this.moduleContainer.databaseRepos.insertItemPropertyRelations(propertyItemRelationsToInsert);
     }
     this.moduleContainer.databaseRepos.updateNotionDBWithLastUpdatedTime(databaseId, currentTime);
-
   }
 }

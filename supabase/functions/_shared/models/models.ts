@@ -46,6 +46,7 @@ export interface ItemColumn {
   label: string;
   itemName: string;
   metadata: any | null;
+  createdTime: string;
 }
 
 export type PropertyColumn = {

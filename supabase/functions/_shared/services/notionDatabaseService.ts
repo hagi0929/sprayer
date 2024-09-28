@@ -15,6 +15,11 @@ export class NotionDatabaseService {
     this.moduleContainer = moduleContainer; // Access the client from the NotionClient object
   }
 
+  async getPageRecordMap(pageId: string) {
+    const recordMap = await this.moduleContainer.notionClient.sessionClient.getPage(pageId);
+    return recordMap;
+  }
+
   async convertToPropertyColumn(DBPropertyData: ParsedNotionAPIPropertyModel, newPropertyName: string): Promise<PropertyColumn[] | null> {
     switch (DBPropertyData.type) {
       case 'title':
@@ -237,22 +242,28 @@ export class NotionDatabaseService {
         });
       });
 
-      const itemsToInsert: ItemColumn[] = itemOperations.add.map((itemId) => {
+      const getPage = DBMetadata.getPage;
+      const itemsToInsert: ItemColumn[] = await Promise.all(itemOperations.add.map(async (itemId) => {
         const item = incomingItemMap.get(itemId);
         const attributes = incomingPropertyAttributeMap.get(itemId)?.attributes;
         if (!item) {
           console.error(`Failed to find item with ID ${itemId}`);
           throw new Error(`Failed to find item with ID ${itemId}`);
         }
-
+        let recordMap = null;
+        if (getPage) {
+          const pageId = item.id;
+          recordMap = await this.getPageRecordMap(pageId);
+        }
         return {
           notionId: itemId,
           label: item.title,
           itemName: DBMetadata.tableName,
           metadata: attributes,
           createdTime: item.createdTime,
+          content: recordMap,
         } as ItemColumn;
-      });
+      }));
 
       await this.moduleContainer.databaseRepos.insertNotionObjects(notionObjectsToInsert);
       await this.moduleContainer.databaseRepos.insertItem(itemsToInsert);

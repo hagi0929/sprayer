@@ -7,10 +7,12 @@ import { PropertyService } from "../services/propertyService.ts";
 import { NotionRenderer } from "npm:@notion-render/client";
 import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { StorageService } from "../services/storageService.ts";
+import { NotionAPI } from 'npm:notion-client'
 
 
 export type NotionClient = {
   client: Client;
+  sessionClient: NotionAPI;
   renderer: NotionRenderer;
 };
 
@@ -28,8 +30,13 @@ export class ModuleContainer {
     const client = new Client({
       auth: Deno.env.get("NOTION_API_KEY"),
     });
+    const notionAPI = new NotionAPI({
+      activeUser: Deno.env.get("NOTION_ACTIVE_USER"),
+      authToken: Deno.env.get("NOTION_TOKEN_V2")
+    })
     this.notionClient = {
       client: client,
+      sessionClient: notionAPI,
       renderer: new NotionRenderer({ client }),
     };
     this.supabaseClient = createClient(

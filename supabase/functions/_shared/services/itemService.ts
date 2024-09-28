@@ -25,8 +25,7 @@ export class ItemService {
     const currentItemMap = new Map<string, ItemColumn>(
       currentItems.map((item) => [item.notionId, item])
     );
-
-
+    
     for (const [itemId, incomingItem] of incomingItemMap) {
       const currentItem = currentItemMap.get(itemId);
 

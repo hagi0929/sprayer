@@ -7,6 +7,7 @@ export interface NotionDBMetadata {
   tableName: string;
   propertyMap: Record<string, string>;
   attributeMap: Record<string, string>;
+  getPage: boolean;
 }
 
 export interface NotionDBColumn {

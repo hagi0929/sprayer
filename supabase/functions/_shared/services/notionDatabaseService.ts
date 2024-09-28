@@ -178,7 +178,6 @@ export class NotionDatabaseService {
 
 
     const rawNotionQueryData = await this.moduleContainer.notionRepos.queryDatabase(databaseId);
-    console.log(rawNotionQueryData);
     const parsedNotionQueryData = rawNotionQueryData.results.map((d) => parseNotionData(d));
 
     const { data: currentItems, error: dd } = await this.moduleContainer.supabaseClient.from("FullItemTable").select(
@@ -253,7 +252,7 @@ export class NotionDatabaseService {
         }
         let recordMap = null;
         if (getPage) {
-          const pageId = item.pageId;
+          const pageId = item.id;
           recordMap = await this.getPageRecordMap(pageId);
         }
         return {

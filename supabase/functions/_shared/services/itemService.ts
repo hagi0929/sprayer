@@ -5,7 +5,6 @@ export class ItemService {
   private moduleContainer: ModuleContainer;
 
   constructor(
-
     moduleContainer: ModuleContainer
   ) {
     this.moduleContainer = moduleContainer; // Access the client from the NotionClient object

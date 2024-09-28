@@ -33,7 +33,7 @@ export class ModuleContainer {
     const notionAPI = new NotionAPI({
       activeUser: Deno.env.get("NOTION_ACTIVE_USER"),
       authToken: Deno.env.get("NOTION_TOKEN_V2")
-    })
+    });
     this.notionClient = {
       client: client,
       sessionClient: notionAPI,

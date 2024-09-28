@@ -69,6 +69,7 @@ export type ParsedNotionAPIPropertyModel = {
 
 export type ParsedNotionAPIModel = {
   id: string;
+  pageId: string;
   title: string;
   createdTime: string;
   lastUpdatedTime: string;
